@@ -1,0 +1,32 @@
+%% Create the Kronecker Delt Signal δ[n]
+% Theorem: δ[n]=1 if n=0, and δ[n]=0 if n != 0
+
+% Set the sample of vector
+n=-5:5;  % Sample from -5 to 5
+
+% Create the DelTa Signal
+delta = zeros(size(n)); % Create a vector of zeros
+delta(n==0) = 1; % Set 1 only in n=0
+
+% plot
+
+% figure,stem(n, delta, 'filled', 'LineWidth', 2);
+% title('Sinal Delta \delta[n]');
+% xlabel('Amostras (n)');
+% ylabel('Amplitude');
+% grid on;
+%% Basic Step signal degree u[n]
+% Theorem: u[n]=1 if n>=0, and u[n]=0 if n<0
+
+n2=-5:5; % Set the sample vectors
+
+% create the step signal
+u=zeros(size(n2)); % s tart with zeros
+u(n2 >= 0) = 1; % Set 1 for n2 values greater than or equal to 0
+
+figure, stem(n, u, "filled", "LineWidth",2)
+title('Título do Gráfico');
+xlabel('Eixo X');
+ylabel('Eixo Y');
+grid on;
+
