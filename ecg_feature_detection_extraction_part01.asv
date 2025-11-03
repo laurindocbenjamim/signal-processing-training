@@ -1,0 +1,11 @@
+%% FEATURE EXTRACTION AND DETETION - PART 1
+% Goal: Identify spectral features in signal using wavelet techniques
+
+%% Steps
+% Load and visualize the Signal
+% Preprocess the signal to remove artifacts
+% Perform wavelet based time-frequency analysis to identify features
+%% Load the signal
+ load("ECG_EEG_DATASET/ECGData.mat");
+
+%% V
