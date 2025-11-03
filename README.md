@@ -1,6 +1,7 @@
 # ECG Signal Processing
 
-<div align="left" style="display: inline-block; margin-right: 20px; margin-bottom: 20px;">
+<div align="left" style="display: inline-block; margin-right: 20px; margin-bottom: 20px; border-radius: 12px; 
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);">
   <img 
     src="catolica-largo.jpg" 
     alt="ESB – Catholic University of Portugal – Porto" 
