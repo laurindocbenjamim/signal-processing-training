@@ -42,6 +42,15 @@ fprintf('Tamanho total do sinal: %d x %d\n', num_canais, num_amostras);
 disp('Dimensões do sinal:');
 disp(size(ecg_signal));
 
+%% Example of Signal
+% Exemplo de uso:
+
+% t = 0:1/Fs:20;                      % 20 segundos
+% x1 = sin(2*pi*5*t);                 % canal 1: 5 Hz
+% x2 = sin(2*pi*15*t) + 0.5*randn(1,length(t));  % canal 2: ruído
+% x3 = randn(1,length(t));            % canal 3: ruído puro
+% dataset_signal = [x1; x2; x3];      % 3 canais
+
 %% Analise apenas um canal (por exemplo, o primeiro)
 %canal_ecg = ecg_signal(1, :);  % Primeira linha
 % Reduzir o sinal para visualização
@@ -49,16 +58,27 @@ disp(size(ecg_signal));
 
 % Use signalAnalyzer com um canal apenas
 % Analisar 3 canais com 5000 amostras cada
-channels=1;
-samples=5000;
-sinal_reduzido = open_signal_analyzer(ecg_signal, channels, samples);
+% Supondo que ecg_signal seja sua variável de sinal
 
+Fs = 250;
+sample=5000;
+channel=1;
 
-%% Visualize usando os nomes corretos
-% figure;
-% plot(ECGData);  % ou o nome correto da variável
-% grid on; title('ECG signal');
-% xlabel('time (sec)');
+[reduced_signal, time_vector] = open_signal_analyzer(ecg_signal, channel, sample, Fs);
+
+%% Filter signal
+ecg_sample_iltered = ecg_filter_signal(reduced_signal, Fs);
+
+%% Visualize the filtered signal
+figure;
+% Domínio do tempo
+subplot(2,2,1); 
+helperTimeDomain(time_vector, reduced_signal, 'Original Signal', 12, 1.5);
+
+% Domínio da frequência
+subplot(2,2,2);
+helperFrequencyDomain(reduced_signal, Fs, 'Frequency Spectrum', 'r');
+
 
 %% Visualize the signal
 % figure;
@@ -72,4 +92,4 @@ sinal_reduzido = open_signal_analyzer(ecg_signal, channels, samples);
 %% Visualize the frequency components in the signal
 
 % figure;
-%pwelch(canal_ecg, [], [], [], Fs); title('Power spectrum of signal');
+%pwelch(sinal_reduzido, [], [], [], Fs); title('Power spectrum of signal');
