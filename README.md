@@ -1,7 +1,7 @@
 # ECG Signal Processing
 
 <div align="center">
-  <img src="catolica-largo.jpg" alt="ESB – Catholic University of Portugal – Porto" width="200"/>
+  <img src="catolica-largo.jpg" alt="ESB – Catholic University of Portugal – Porto" width="400"/>
   <p><i>Project developed within the Biomedical Signal Processing course</i></p>
 </div>
 
