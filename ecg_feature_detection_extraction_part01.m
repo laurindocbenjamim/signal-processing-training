@@ -6,7 +6,9 @@
 % Preprocess the signal to remove artifacts
 % Perform wavelet based time-frequency analysis to identify features
 %% Load the signal
- load("ECG_EEG_DATASET/ECGData.mat");
+ %load("ECG_EEG_DATASET/ECGData.mat");
+ load("COVID-19 Database\ECG Signals\Patient_0001_Down.mat");
+ load("COVID-19 Database\ECG Signals\Patient_0001_Up.mat");
 
 %% Check witch variables were loaded
 clc % clear the command window 
@@ -60,36 +62,42 @@ disp(size(ecg_signal));
 % Analisar 3 canais com 5000 amostras cada
 % Supondo que ecg_signal seja sua variável de sinal
 
+t = (0:length(dataset_signal)-1) / Fs;
 Fs = 250;
 sample=5000;
 channel=1;
 
-[reduced_signal, time_vector] = open_signal_analyzer(ecg_signal, channel, sample, Fs);
+%[reduced_signal, time_vector] = open_signal_analyzer(ecg_signal, channel, sample, Fs);
+
+
 
 %% Filter signal
-ecg_sample_iltered = ecg_filter_signal(reduced_signal, Fs);
+ecg_sample_filtered = ecg_filter_signal(ecg_signal, Fs);
 
-%% Visualize the filtered signal
-figure;
-% Domínio do tempo
-subplot(2,2,1); 
-helperTimeDomain(time_vector, reduced_signal, 'Original Signal', 12, 1.5);
+% Forçar exibição e trazer figuras para frente
+drawnow;
+shg; % Show graph window
 
-% Domínio da frequência
-subplot(2,2,2);
-helperFrequencyDomain(reduced_signal, Fs, 'Frequency Spectrum', 'r');
+% Listar todas as figuras abertas
+disp('Figuras abertas:');
+figHandles = findobj('Type', 'figure');
+disp(figHandles);
 
+%% Time frequency using spectrogram
+close all;
 
-%% Visualize the signal
 % figure;
-% plot(t,ECGData, 'r');
-% grid on; title('ECG signal');
+% spectrogram(ecg_sample_filtered, [], [], [], Fs, 'yaxis');
+% title('Time Frequency using Spectrogram')
+% 
+% figure;
+% plot(t, ecg_sample_filtered, 'r');
+% grid on; title('Filtered ECG signal');
 % xlabel('time (sec)');
 
-% Or we can use 
-% signalAnalyzer
 
-%% Visualize the frequency components in the signal
 
-% figure;
-%pwelch(sinal_reduzido, [], [], [], Fs); title('Power spectrum of signal');
+
+
+
+
