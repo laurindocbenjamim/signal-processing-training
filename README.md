@@ -1,7 +1,7 @@
 # ECG Signal Processing
 
 <div align="center">
-  <img src="https://www.phytosudoe.eu/wp-content/uploads/sites/3/2020/06/UCP-CRP.png" alt="ESB – Catholic University of Portugal – Porto" width="200"/>
+  <img src="catolica-largo.jpg" alt="ESB – Catholic University of Portugal – Porto" width="200"/>
   <p><i>Project developed within the Biomedical Signal Processing course</i></p>
 </div>
 
