@@ -1,6 +1,6 @@
 # ECG Signal Processing
 <div style="float: right; margin: 0 0 10px 20px; text-align: center; max-width: 400px; border: 1px solid #ddd; padding: 5px; border-radius: 10px;">
-    <img src="main_project/catolica-largo.jpg" alt="ESB – Catholic University of Portugal – Porto" style="width: 100%; height: auto; display: block; border-radius: 8px;"/>
+    <img src="main_project/catolica-largo.jpg" alt="ESB – Catholic University of Portugal – Porto" width="400" style="width: 400px; height: auto; display: block; border-radius: 8px;"/>
     <p style="font-size: 0.9em; margin-top: 5px;"><i>Project developed within the Biomedical Signal Processing course</i></p>
 </div>
 
