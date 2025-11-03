@@ -32,11 +32,11 @@ end
 % x = sin(pi*n/5) ./ (pi*n/5); 
 % x(isnan(x)) = 1;  % Corrigir divisão por zero em n=0
 
-figure;
-stem(n, x, 'b', 'filled', 'LineWidth', 2);
-title('Sinal Original: x[n] (triangular)');
-xlabel('n'); ylabel('Amplitude');
-grid on;
+% figure;
+% stem(n, x, 'b', 'filled', 'LineWidth', 2);
+% title('Sinal Original: x[n] (triangular)');
+% xlabel('n'); ylabel('Amplitude');
+% grid on;
 
 %% 1. y1[n] = 2x[-n+2] * x[-n-2] * x[n]
 [x1, n1] = transform_signal(x, n, 'reverse_shift', 2);   % x[-n+2]
