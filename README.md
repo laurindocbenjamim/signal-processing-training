@@ -1,8 +1,21 @@
 # ECG Signal Processing
 
-<div align="center">
-  <img src="catolica-largo.jpg" alt="ESB – Catholic University of Portugal – Porto" width="400"/>
-  <p><i>Project developed within the Biomedical Signal Processing course</i></p>
+<div align="left" style="display: inline-block; margin-right: 20px; margin-bottom: 20px;">
+  <img 
+    src="catolica-largo.jpg" 
+    alt="ESB – Catholic University of Portugal – Porto" 
+    width="400" 
+    style="
+      border-radius: 12px; 
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15); 
+      display: block; 
+      max-width: 100%; 
+      height: auto;
+    "
+  />
+  <p style="font-style: italic; color: #555; margin-top: 8px; text-align: center;">
+    Project developed within the Biomedical Signal Processing course
+  </p>
 </div>
 
 Project focused on electrocardiographic (ECG) signal processing, emphasizing artifact removal and signal normalization.
