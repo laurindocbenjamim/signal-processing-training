@@ -48,7 +48,7 @@ Project focused on electrocardiographic (ECG) signal processing, emphasizing art
 
 # 📊 ECG Signal Processing - Patient Data
 
-Este repositório contém sinais ECG do **Paciente 001** no formato padrão MIT-BIH, um formato amplamente utilizado para bancos de dados de electrocardiograma.
+This repository contains ECG signals from **Patient 001** in the standard MIT-BIH format, widely used for electrocardiogram databases.
 
 ## 📁 File Structure
 
@@ -82,7 +82,9 @@ Each ECG record consists of three files:
 
 ### Prerequisites
 Install the **WFDB Toolbox** for MATLAB:
-[Download available here](https://physionet.org/physiotools/matlab/wfdb-app-matlab/)
+[Download available here](https://physionet.org/physiotools/matlab/wfdb-app-matlab/){:target="_blank"}
+
+Install the **WFDB Toolbox** for MATLAB: <a href="https://physionet.org/physiotools/matlab/wfdb-app-matlab/" target="_blank">Download available here</a>
 
 ## 🛠️ Load into MATLAB
 
