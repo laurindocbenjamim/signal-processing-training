@@ -12,8 +12,7 @@ Project focused on electrocardiographic (ECG) signal processing, emphasizing art
 ---
 
 ## Authors
-
-- **Your Full Name**  
+ 
 - **Laurindo C. Benjamim** (MSc.)  
 - **Bernardo Aragão Português** (MSc.)  
 - **Elham Rahmaty** (MSc.)
@@ -21,6 +20,12 @@ Project focused on electrocardiographic (ECG) signal processing, emphasizing art
 ---
 
 ## Project Workflow
+
+<div style="float: right; margin: 0 0 10px 20px; text-align: center; max-width: 1000px; border: 1px solid #ddd; padding: 5px; border-radius: 10px;">
+    <img src="main_project/signal-processing-workflow.png" alt="ESB – Catholic University of Portugal – Porto" width="700" style="width: 700px; height: auto; display: block; border-radius: 8px;"/>
+    <p style="font-size: 0.9em; margin-top: 5px;"><i>Signal processing workflow</i></p>
+</div>
+
 
 1. **ECG Signal Acquisition**  
    Loading of the raw signal (e.g., `.mat`, `.txt`, or PhysioNet databases).
