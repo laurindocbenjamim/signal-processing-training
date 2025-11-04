@@ -81,9 +81,6 @@ Each ECG record consists of three files:
 ## 🛠️ How to Load in MATLAB
 
 ### Prerequisites
-Install the **WFDB Toolbox** for MATLAB:
-[Download available here](https://physionet.org/physiotools/matlab/wfdb-app-matlab/){:target="_blank"}
-
 Install the **WFDB Toolbox** for MATLAB: <a href="https://physionet.org/physiotools/matlab/wfdb-app-matlab/" target="_blank">Download available here</a>
 
 ## 🛠️ Load into MATLAB
