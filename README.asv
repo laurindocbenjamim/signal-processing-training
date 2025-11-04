@@ -92,7 +92,7 @@ header_info = wfdbdesc('50010_re');
 ```
 
 Method 4: Loading .mat files
-```matlab
+matlab
 % Load preprocessed MATLAB files
 load('ecg_processed.mat');  % Replace with actual .mat filename
 
@@ -102,44 +102,15 @@ load('ecg_processed.mat');  % Replace with actual .mat filename
 % - time_vector: Time axis
 % - features: Extracted ECG features
 % - metadata: Signal information
-```
 
 #### 📊 Data Structure
-* signal: Matrix with ECG channels (each column = one channel)
+*signal:* Matrix with ECG channels (each column = one channel)
 
-* fs: Sampling frequency (Hz)
+fs: Sampling frequency (Hz)
 
-* tm: Time vector
+tm: Time vector
 
 #### 🔍 Basic Processing Example
-
-```matlab
-% Load signal
-[ecg_signal, fs, tm] = rdmat('50010_re');
-
-% Plot the signal
-figure;
-plot(tm, ecg_signal);
-xlabel('Time (s)');
-ylabel('Amplitude');
-title('ECG Signal - Patient 001');
-grid on;
-
-% Basic information
-fprintf('Sampling frequency: %d Hz\n', fs);
-fprintf('Signal duration: %.2f seconds\n', tm(end));
-fprintf('Number of channels: %d\n', size(ecg_signal, 2));
-```
-
-#### 💾 Saving Processed Data as .mat
-```matlab % After processing, save as .mat for faster loading
-ecg_processed = ecg_signal;  % Your processed signal
-sampling_rate = fs;
-time_axis = tm;
-patient_info = 'Patient001_Record50010';
-
-save('ecg_processed.mat', 'ecg_processed', 'sampling_rate', 'time_axis', 'patient_info');
-```
 
 ### Pre-requisits
 Instale a **WFDB Toolbox** para MATLAB:
