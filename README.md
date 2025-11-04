@@ -67,7 +67,7 @@ Each ECG record consists of three files:
 - `50014ire.dat/.hea/.xyz` - Registro ECG 50014 (2.6 MB)
 - `50016ire.dat/.hea/.xyz` - Registro ECG 50016 (2.6 MB)
 
-Download available at: <a href="https://physionet.org/physiotools/matlab/wfdb-app-matlab/">https://physionet.org/physiotools/matlab/wfdb-app-matlab/</a>
+Download available at: <a href="https://physionet.org/physiotools/matlab/wfdb-app-matlab/" target="_blank">https://physionet.org/physiotools/matlab/wfdb-app-matlab/</a>
 
 ## 🛠️ Load into MATLAB
 
