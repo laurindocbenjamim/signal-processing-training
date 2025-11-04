@@ -55,34 +55,49 @@ Este repositório contém sinais ECG do **Paciente 001** no formato padrão MIT-
 Each ECG record consists of three files:
 
 | Extension | Description |
-|----------|-----------|
+|-----------|-------------|
 | **.dat** | Binary file with ECG signal data |
 | **.hea** | Header file with metadata |
-| **.xyz** | File with electrode lead coordinates|
-| **.mat** |MATLAB format file containing processed/preprocessed signals|
+| **.xyz** | File with electrode lead coordinates |
+| **.mat** | MATLAB format file containing processed/preprocessed signals |
 
-### Arquivos Disponíveis
+### Available Files
 
-- `50010_re.dat/.hea/.xyz` - Registro ECG 50010 (900 KB)
-- `50014ire.dat/.hea/.xyz` - Registro ECG 50014 (2.6 MB)
-- `50016ire.dat/.hea/.xyz` - Registro ECG 50016 (2.6 MB)
+- **Record 50010**
+  - `50010_re.dat` - ECG binary data (900 KB)
+  - `50010_re.hea` - Header file (2.6 KB)
+  - `50010_re.xyz` - Electrode coordinates (225 KB)
 
-Download available at: <a href="https://physionet.org/physiotools/matlab/wfdb-app-matlab/" target="_blank">https://physionet.org/physiotools/matlab/wfdb-app-matlab/</a>
+- **Record 50014**
+  - `50014ire.dat` - ECG binary data (2.6 MB)
+  - `50014ire.hea` - Header file (2.6 KB)
+  - `50014ire.xyz` - Electrode coordinates (675 KB)
+
+- **Record 50016**
+  - `50016ire.dat` - ECG binary data (2.6 MB)
+  - `50016ire.hea` - Header file (2.6 KB)
+  - `50016ire.xyz` - Electrode coordinates (675 KB)
+
+## 🛠️ How to Load in MATLAB
+
+### Prerequisites
+Install the **WFDB Toolbox** for MATLAB:
+[Download available here](https://physionet.org/physiotools/matlab/wfdb-app-matlab/)
 
 ## 🛠️ Load into MATLAB
 
-Method 1: Using rdmat (Recommended)
+##### Method 1: Using rdmat (Recommended)
 ```matlab
 % Load the .dat file (name without extension)
 [signal, fs, tm] = rdmat('50010_re');
 ```
 
-Method 2: Using wfdb (Waveform Database Toolbox)
+##### Method 2: Using wfdb (Waveform Database Toolbox)
 ```matlab
 [signal, fs] = rdsamp('50010_re');
 ```
 
-Method 3: Manual reading
+##### Method 3: Manual reading
 ```matlab
 % Read the header first
 header_info = wfdbdesc('50010_re');
@@ -91,7 +106,7 @@ header_info = wfdbdesc('50010_re');
 [signal, fs, tm] = rdsamp('50010_re', 'header', header_info);
 ```
 
-Method 4: Loading .mat files
+##### Method 4: Loading .mat files
 ```matlab
 % Load preprocessed MATLAB files
 load('ecg_processed.mat');  % Replace with actual .mat filename

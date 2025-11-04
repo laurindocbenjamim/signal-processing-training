@@ -52,26 +52,43 @@ Este repositório contém sinais ECG do **Paciente 001** no formato padrão MIT-
 
 ## 📁 File Structure
 
+## 📊 File Structure
+
 Each ECG record consists of three files:
 
 | Extension | Description |
-|----------|-----------|
+|-----------|-------------|
 | **.dat** | Binary file with ECG signal data |
 | **.hea** | Header file with metadata |
-| **.xyz** | File with electrode lead coordinates|
-| **.mat** |MATLAB format file containing processed/preprocessed signals|
+| **.xyz** | File with electrode lead coordinates |
+| **.mat** | MATLAB format file containing processed/preprocessed signals |
 
-### Arquivos Disponíveis
+### Available Files
 
-- `50010_re.dat/.hea/.xyz` - Registro ECG 50010 (900 KB)
-- `50014ire.dat/.hea/.xyz` - Registro ECG 50014 (2.6 MB)
-- `50016ire.dat/.hea/.xyz` - Registro ECG 50016 (2.6 MB)
+- **Record 50010**
+  - `50010_re.dat` - ECG binary data (900 KB)
+  - `50010_re.hea` - Header file (2.6 KB)
+  - `50010_re.xyz` - Electrode coordinates (225 KB)
 
-Download available at: <a href="https://physionet.org/physiotools/matlab/wfdb-app-matlab/">https://physionet.org/physiotools/matlab/wfdb-app-matlab/</a>
+- **Record 50014**
+  - `50014ire.dat` - ECG binary data (2.6 MB)
+  - `50014ire.hea` - Header file (2.6 KB)
+  - `50014ire.xyz` - Electrode coordinates (675 KB)
+
+- **Record 50016**
+  - `50016ire.dat` - ECG binary data (2.6 MB)
+  - `50016ire.hea` - Header file (2.6 KB)
+  - `50016ire.xyz` - Electrode coordinates (675 KB)
+
+## 🛠️ How to Load in MATLAB
+
+### Prerequisites
+Install the **WFDB Toolbox** for MATLAB:
+[Download available here](https://physionet.org/physiotools/matlab/wfdb-app-matlab/)
 
 ## 🛠️ Load into MATLAB
 
-Method 1: Using rdmat (Recommended)
+#### Method 1: Using rdmat (Recommended)
 ```matlab
 % Load the .dat file (name without extension)
 [signal, fs, tm] = rdmat('50010_re');
@@ -92,7 +109,7 @@ header_info = wfdbdesc('50010_re');
 ```
 
 Method 4: Loading .mat files
-matlab
+```matlab
 % Load preprocessed MATLAB files
 load('ecg_processed.mat');  % Replace with actual .mat filename
 
@@ -102,15 +119,44 @@ load('ecg_processed.mat');  % Replace with actual .mat filename
 % - time_vector: Time axis
 % - features: Extracted ECG features
 % - metadata: Signal information
+```
 
 #### 📊 Data Structure
-*signal:* Matrix with ECG channels (each column = one channel)
+* signal: Matrix with ECG channels (each column = one channel)
 
-fs: Sampling frequency (Hz)
+* fs: Sampling frequency (Hz)
 
-tm: Time vector
+* tm: Time vector
 
 #### 🔍 Basic Processing Example
+
+```matlab
+% Load signal
+[ecg_signal, fs, tm] = rdmat('50010_re');
+
+% Plot the signal
+figure;
+plot(tm, ecg_signal);
+xlabel('Time (s)');
+ylabel('Amplitude');
+title('ECG Signal - Patient 001');
+grid on;
+
+% Basic information
+fprintf('Sampling frequency: %d Hz\n', fs);
+fprintf('Signal duration: %.2f seconds\n', tm(end));
+fprintf('Number of channels: %d\n', size(ecg_signal, 2));
+```
+
+#### 💾 Saving Processed Data as .mat
+```matlab % After processing, save as .mat for faster loading
+ecg_processed = ecg_signal;  % Your processed signal
+sampling_rate = fs;
+time_axis = tm;
+patient_info = 'Patient001_Record50010';
+
+save('ecg_processed.mat', 'ecg_processed', 'sampling_rate', 'time_axis', 'patient_info');
+```
 
 ### Pre-requisits
 Instale a **WFDB Toolbox** para MATLAB:
