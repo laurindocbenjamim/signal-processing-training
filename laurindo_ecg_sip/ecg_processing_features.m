@@ -1,0 +1,321 @@
+%==========================================================================
+%   Script MATLAB para Processamento de Sinal ECG:
+%   Leitura, Remoção de Artefatos e Extração de Características
+%==========================================================================
+
+%% 1. Configurações Iniciais e Definição de Variáveis
+clc; clear; close all;
+%load('../main_db/ecg_db_patient_01/')
+
+% Defina o nome dos arquivos (presumindo que o .dat e .hea estejam na mesma pasta)
+header_file = '../main_db/ecg_db_patient_01/s0010_re.hea'; 
+data_file_dat = '../main_db/ecg_db_patient_01/s0010_re.dat';
+data_file_xyz = '../main_db/ecg_db_patient_01/s0010_re.xyz'; % Arquivo de leads ortogonais
+
+% Parâmetros do Sinal (lidos do .hea)
+Fs = 1000; % Frequência de amostragem em Hz
+T = 1/Fs;  % Período de amostragem
+num_samples = 38400; % Número de amostras
+t = (0:num_samples-1)*T; % Vetor de tempo
+
+% O lead 'II' é frequentemente usado para análise de características
+lead_index = 2; % O lead 'II' é o segundo na lista
+
+%% 2. Leitura dos Dados do ECG (Ajuste conforme o formato exato de leitura do seu .dat)
+
+% NOTA: A leitura exata de arquivos .dat no formato do PhysioNet/WFDB 
+% pode requerer a toolbox WFDB ou um código de leitura específico.
+% A linha abaixo é um PLACEHOLDER SIMPLES. Se os seus dados não foram 
+% lidos corretamente, você precisará de uma função 'rddata.m' ou similar.
+try
+    % Tentativa de leitura do arquivo .dat como uma matriz de inteiros de 16-bit
+    % (presumindo 12 leads em s0010_re.dat e 3 em s0010_re.xyz)
+    fid = fopen(data_file_dat, 'r');
+    data_int = fread(fid, [12, num_samples], 'int16'); % 12 leads, 38400 amostras cada
+    fclose(fid);
+    
+    % Leitura do arquivo .xyz
+    fid_xyz = fopen(data_file_xyz, 'r');
+    data_xyz_int = fread(fid_xyz, [3, num_samples], 'int16'); % 3 leads, 38400 amostras cada
+    fclose(fid_xyz);
+
+    % Combina e seleciona o lead (Exemplo: Lead II, índice 2)
+    ECG_raw = data_int(lead_index, :);
+    
+    % Aplica o fator de ganho (scale) e baseline (offset) do arquivo .hea para o Lead II (índice 2)
+    % Ganho: 2000, Offset: -458 (segunda linha do .hea)
+    Gain = 2000; % Supondo que seja o ganho em unidades de ADU/mV
+    Baseline = -458; % Valor da baseline em ADU
+    
+    ECG_mV = (ECG_raw - Baseline) / Gain; % Sinal em milivolts (mV)
+    
+    disp('======= Leitura dos arquivos concluida com sucesso! =======');
+catch
+    disp('ERRO: Não foi possível ler o arquivo .dat. Verifique o formato de dados (e.g., int16) e o uso da função rddata.m se necessário.');
+    return;
+end
+
+%% 3. Remoção de Artefatos (Filtragem)
+
+%[ECG_filtered] = remove_artefacts_2(ECG_mV, Fs);
+[ECG_filtered_final] = bandpass_filtering_recomended(ECG_mV, Fs, 2);
+
+% function [ECG_filtered] = remove_artefacts_1(ECG_mV, Fs)
+%     % 3. Remoção de Artefatos (Filtragem)
+% 
+%     % ECGs geralmente possuem ruído de alta frequência (EMG) e ruído de 
+%     % baixa frequência (desvio da linha de base/respiração).
+% 
+%     % --- A. Remoção de Ruído da Linha de Base (Baseline Wander) ---
+%     % Filtro Highpass (passa-altas) para remover desvio de linha de base (f < 0.5 Hz)
+%     Wn_high = 0.5 / (Fs/2); % Frequência de corte normalizada (0.5 Hz)
+%     [b_high, a_high] = butter(2, Wn_high, 'high'); % Filtro Butterworth de 2ª ordem
+%     ECG_baseline_corr = filtfilt(b_high, a_high, ECG_mV); % 'filtfilt' evita defasagem
+% 
+%     % --- B. Remoção de Ruído de Alta Frequência / Ruído Muscular ---
+%     % Filtro Lowpass (passa-baixas) para remover ruído de alta frequência (f > 40 Hz)
+%     Wn_low = 40 / (Fs/2); % Frequência de corte normalizada (40 Hz)
+%     [b_low, a_low] = butter(2, Wn_low, 'low'); % Filtro Butterworth de 2ª ordem
+%     ECG_filtered = filtfilt(b_low, a_low, ECG_baseline_corr);
+% end
+
+%% 
+function [ECG_cleaned] = remove_artefacts_2(ECG_mV, Fs)
+
+    
+    %% 3. Remoção de Artefatos (Filtragem) - secure solution
+    
+    % --- A. Remoção de Ruído da Linha de Base (Baseline Wander) ---
+    Wn_high = 0.5 / (Fs/2); 
+    [b_high, a_high] = butter(2, Wn_high, 'high'); 
+    ECG_baseline_corr = filtfilt(b_high, a_high, ECG_mV); 
+    
+    % --- B. Remoção de Ruído de Alta Frequência / Ruído Muscular ---
+    Wn_low = 40 / (Fs/2); 
+    [b_low, a_low] = butter(2, Wn_low, 'low'); 
+    ECG_filtered = filtfilt(b_low, a_low, ECG_baseline_corr);
+    
+    % --- C. Remoção de Ruído da Rede Elétrica (50 Hz) ---
+    % Alternativa segura: Usando Filtro Butterworth Rejeita-Banda ('stop')
+    % Esta função é básica e não deve dar erro.
+    F_power = 50; % Frequência da rede elétrica
+    W_stop = [F_power - 1, F_power + 1] / (Fs/2); % Banda de rejeição: 49 a 51 Hz (normalizada)
+    
+    % Cria um filtro Butterworth de 4ª ordem (ajustável)
+    [b_notch, a_notch] = butter(4, W_stop, 'stop'); 
+    
+    % Aplica o filtro de forma zero-fase
+    ECG_cleaned = filtfilt(b_notch, a_notch, ECG_filtered);
+end
+
+%% --- C. Remoção de Ruído da Rede Elétrica (50/60 Hz) ---
+
+[ECG_filtered_final] = remove_electrical_noises(ECG_filtered_final, Fs);
+
+function [ECG_cleaned] = remove_electrical_noises(ECG_filtered, Fs)
+    % Como a amostragem é 1000 Hz, o ruído de 50 Hz/60 Hz é um problema.
+    % Usando um Notch Filter (filtro rejeita-banda)
+    % Wo = 50 / (Fs/2); % Frequência de corte normalizada (50 Hz)
+    % BW = Wo/35;        % Largura de banda (ajustável)
+    % [b_notch, a_notch] = iirnotch(Wo, BW); 
+    % ECG_cleaned = filtfilt(b_notch, a_notch, ECG_filtered);
+    
+    % Repetindo a linha C que retorna um erro da lib iitorch()
+    % --- C. Remoção de Ruído da Rede Elétrica (50/60 Hz) ---
+    % Usando um Notch Filter (filtro rejeita-banda)
+
+    % Linhas originais que deram erro:
+    % Wo = 50 / (Fs/2); % Frequência de corte normalizada (50 Hz)
+    % BW = Wo/35;        % Largura de banda (ajustável)
+    % [b_notch, a_notch] = iirnotch(Wo, BW); 
+
+    % Nova Opção de Substituição (Rejeita-Banda Butterworth):
+    W_stop = [49 51] / (Fs/2); % Banda de rejeição: 49 a 51 Hz
+    [b_notch, a_notch] = butter(4, W_stop, 'stop'); % Filtro Butterworth de 4a ordem (ajuste a ordem se necessário)
+
+    ECG_cleaned = filtfilt(b_notch, a_notch, ECG_filtered);
+    disp("ECG signal cleaned")
+end
+%%
+
+% % Plotagem para verificar o efeito da filtragem
+figure;
+subplot(2,1,1);
+plot(t, ECG_mV);
+title('ECG Bruto (Lead II)');
+xlabel('Tempo (s)'); ylabel('Amplitude (mV)');
+grid on; xlim([10 15]); % Janela de 5s para visualização
+% 
+subplot(2,1,2);
+plot(t, ECG_filtered_final);
+title('ECG Filtrado (Após remoção de baseline, high-freq e 50Hz)');
+xlabel('Tempo (s)'); ylabel('Amplitude (mV)');
+grid on; xlim([10 15]); % Mesma janela de visualização
+% 
+% %% 4. Extração de Características (Deteção de Pico R e Caracteres Básicos)
+% 
+% % NOTA: A função 'pan_tompkin' para deteção de R-peaks é comumente usada, 
+% % mas não é nativa do MATLAB. Você pode usar 'findpeaks' para uma abordagem 
+% % mais simples, ou importar a função Pan-Tompkins.
+% 
+% % --- A. Deteção de R-Peaks (picos R) usando 'findpeaks' (simples) ---
+[pks, locs] = findpeaks(ECG_filtered_final, Fs, ...
+    'MinPeakHeight', 0.2*max(ECG_filtered_final), ... % Ajustar altura mínima
+    'MinPeakDistance', 0.2); % Distância mínima entre picos (0.2s = 300 BPM)
+
+% % --- B. Extração de Características do Domínio do Tempo ---
+num_beats = length(locs);
+disp(['Número de batimentos detectados: ', num2str(num_beats)]);
+
+% % Taxa de Batimentos Cardíacos Média (BPM)
+duration_s = t(end);
+BPM_avg = (num_beats / duration_s) * 60;
+disp(['Taxa de Batimentos Cardíacos Média (BPM): ', num2str(BPM_avg)]);
+
+% % Variabilidade da Frequência Cardíaca (HRV) - Exemplo básico: SDNN
+RR_intervals_s = diff(locs); % Intervalos R-R em segundos
+RR_intervals_ms = RR_intervals_s * 1000; % em milissegundos
+SDNN = std(RR_intervals_ms); % Desvio Padrão dos Intervalos N-N (SDNN)
+disp(['SDNN (ms): ', num2str(SDNN)]);
+
+% % --- C. Visualização dos R-Peaks ---
+figure;
+plot(t, ECG_filtered_final);
+hold on;
+plot(locs, pks, 'ro', 'MarkerSize', 8);
+title('ECG Filtrado com Picos R Detectados');
+xlabel('Tempo (s)'); ylabel('Amplitude (mV)');
+legend('Sinal ECG Filtrado', 'R-Peaks');
+grid on;
+% 
+% %% 5. Classificação (Passo Conceitual)
+% 
+% % Para Classificação, as características extraídas (BPM, SDNN, etc.) 
+% % seriam usadas como entrada para um modelo de Machine Learning.
+% 
+% % Exemplo de Estrutura de Características para um Único Batimento:
+% features_vector = [BPM_avg, SDNN, ... outros parâmetros de tempo e frequência]; 
+
+% % Para a classificação por classe:
+% % 'Classe' deste sinal: Infarto do Miocárdio (Infero-Lateral) + Diabetes Mellitus
+% % Na prática, você precisaria de um conjunto de treinamento com 
+% % vetores de características e seus rótulos de classe (e.g., Normal, FA, IAM, etc.).
+%% Feature extraction
+
+%% 1. Configuração da Decomposição Wavelet (DWT)
+
+% Vamos usar a Decomposição Wavelet Discreta (DWT) com 5 níveis,
+% que decompõe o sinal em sub-bandas de frequência úteis para o ECG.
+N_levels = 5;
+Wavelet_Type = 'db4'; % Uma wavelet comum em bio-sinais
+
+
+sinal_ecg = ECG_filtered_final;
+
+% Executa a decomposição do sinal
+[C,L]=wavedec(sinal_ecg, N_levels, Wavelet_Type);
+% C: Vetor de coeficientes; L: Estrutura do comprimento dos coeficientes
+% Nível 5 (cA5): 0   - 15.625 Hz (Baseline, P-wave)
+% Nível 4 (cD5): 15.625 - 31.25 Hz (QRS, T-wave)
+% Nível 3 (cD4): 31.25 - 62.5  Hz (Ruído EMG)
+% Nível 2 (cD3): 62.5  - 125   Hz (Ruído EMG)
+% Nível 1 (cD2): 125   - 250   Hz (Ruído EMG/Alta frequência)
+
+%% 2. EXTRAÇÃO DE CARACTERÍSTICAS DERIVADAS DE WAVELET (Energy)
+
+% Criar uma tabela para armazenar os resultados
+Feature_Table = table('Size', [1, 5], 'VariableTypes', {'double', 'double', 'double', 'double', 'double'}, ...
+                      'VariableNames', {'En_Total', 'Hurst_Exp', 'Higuchi_FD', 'Katz_FD', 'En_D5'});
+
+
+
+%% 2.2 Energia em uma Sub-banda (e.g., Nível D5: 15-31 Hz, onde está o QRS)
+cD5 = detcoef(C, L, N_levels); % Coeficientes de Detalhe no último nível
+En_D5 = sum(cD5.^2);
+Feature_Table.En_D5(1) = En_D5;
+
+function [] = extract_features(ECG_filtered_final)
+    % ... dentro do loop de processamento para cada sinal
+    
+    % O sinal ECG filtrado é: ECG_filtered_final
+    
+    %% ETAPA 4: EXTRAÇÃO DE FEATURES
+    
+    % 1. Energy (En)
+    Features.En = sum(ECG_filtered_final .^ 2);
+    
+    % 2. Higuchi Fractal Dimension (H) - Assumindo que você baixou a função
+    kmax = 8; % Parâmetro comum. Verifique a documentação da função.
+    Features.H = Higuchi_FD(ECG_filtered_final, kmax);
+    
+    % 3. Katz Fractal Dimension (K) - Assumindo que você baixou a função
+    Features.K = Katz_FD(ECG_filtered_final);
+    
+    % 4. Hurst Exponent (EH) - Assumindo que você baixou a função
+    % Muitas implementações do Hurst levam tempo. Verifique a função baixada.
+    Features.EH = generalized_hurst_exponent_function(ECG_filtered_final); % Nome da função pode variar
+    
+    % ... Salve as features no seu relatório final ou tabela
+end
+
+%%
+% ... (código anterior)
+
+%% 4. EXTRAÇÃO DE CARACTERÍSTICAS NÃO LINEARES (Fractais e Hurst)
+
+sinal_ecg = ECG_filtered_final;
+
+% --- A. Energy (En) ---
+% A Energia Total do Sinal Wavelet (soma dos quadrados dos coeficientes)
+
+% 2.1 Energia Total (En_Total)
+% Coeficientes de Aproximação (cA) do nível mais baixo (N_levels)
+cA = appcoef(C, L, Wavelet_Type, N_levels);
+Energy_cA = sum(cA.^2);
+
+% Coeficientes de Detalhe (cD) para todos os níveis
+Energy_cD_Total = 0;
+for k = 1:N_levels
+    cD = detcoef(C, L, k);
+    Energy_cD_Total = Energy_cD_Total + sum(cD.^2);
+end
+
+En_Total = Energy_cA + Energy_cD_Total; % Energia Total
+Feature_Table.En_Total(1) = En_Total;
+%%
+
+% --- B. Hurst Exponent (EH) ---
+Hurst_Exp = Hurst_Exponent_RS_Analysis(sinal_ecg);
+
+% --- C. Higuchi Fractal Dimension (H) ---
+Kmax_param = 16; % Valor de escala Kmax
+Higuchi_FD = Higuchi_Fractal_Dimension(sinal_ecg, Kmax_param);
+
+% --- D. Katz Fractal Dimension (K) ---
+Katz_FD = Katz_Fractal_Dimension(sinal_ecg);
+
+% Criar a tabela de features (adicionando K, H e EH)
+Feature_Table = table(En_Total, Hurst_Exp, Higuchi_FD, Katz_FD, En_D5, ...
+                      'VariableNames', {'En_Total', 'Hurst_Exp', 'Higuchi_FD', 'Katz_FD', 'En_D5'});
+
+%% 5. Exibir e Salvar as Features
+
+% Exibir as características calculadas
+disp(' ');
+disp('=== CARACTERÍSTICAS NÃO LINEARES EXTRAÍDAS ===');
+disp(Feature_Table);
+
+% Salvar a Tabela de Features em uma pasta
+output_folder = 'Extracted_Features';
+if ~exist(output_folder, 'dir')
+    mkdir(output_folder);
+end
+
+% Nome do arquivo de saída (use o nome do arquivo original)
+output_filename = fullfile(output_folder, 's0010_re_features.csv');
+
+% NOTA: Se você tiver mais sinais, você concatenaria as linhas
+% nesta tabela antes de salvar.
+writetable(Feature_Table, output_filename);
+
+disp(['✅ Características salvas em: ', output_filename]);
