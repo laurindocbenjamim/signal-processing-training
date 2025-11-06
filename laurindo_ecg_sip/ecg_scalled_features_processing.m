@@ -184,6 +184,8 @@ disp('=== PROCESSAMENTO EM LOTE CONCLUÍDO ===');
 disp('Tabela Mestra de Características (Primeiras 5 linhas):');
 disp(Feature_Master_Table(1:min(5, height(Feature_Master_Table)), :));
 
+visualization_and_analysis(BASE_DIR, Feature_Master_Table);
+
 % Salva a tabela completa em um arquivo CSV
 Output_Filename = fullfile(OUTPUT_DIR, 'ECG_Features_Master_Summary.csv');
 writetable(Feature_Master_Table, Output_Filename);
