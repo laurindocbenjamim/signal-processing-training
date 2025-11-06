@@ -1,0 +1,1 @@
+### Used Theorem and Equations of the Signal Processing  
