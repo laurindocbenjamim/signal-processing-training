@@ -20,6 +20,10 @@ end
 
 %% Signal Normalization
 
+%In this normilazaton we have already Segemented the signal into 1 second
+%windows. PLEASE USE THIS SEGMENTATION, SO 1 FEATURE PER WINDOW -> For
+%LOOPS
+
 FNyquist = Fs/2; % Frequência de Nyquist
 WinTime = 1; % time in seconds for each window
 windowSize = Fs * WinTime;

@@ -20,6 +20,8 @@ end
 
 %% Signal Normalization
 
+%In this normilazaton
+
 FNyquist = Fs/2; % Frequência de Nyquist
 WinTime = 1; % time in seconds for each window
 windowSize = Fs * WinTime;
@@ -41,6 +43,5 @@ for k = 1:length(ECGSignalNormalized(:,1))
 
 end
 
-plot(ECGFilteredNormalized{1,1})
 
 
