@@ -17,9 +17,8 @@ clc; clear; close all;
 
 
 BASE_DIR = '../main_db/';
-Patient_Dirs = {'ecg_db_patient_01', 'ecg_db_patient_01-1', ...
-'ecg_db_patient_02', 'ecg_db_patient_03', ...
-'ecg_db_patient_04', 'ecg_db_patient_04-1'};
+Patient_Dirs = {'ecg_db_patient_01', ...
+'ecg_db_patient_02', 'ecg_db_patient_03', };
 
 
 OUTPUT_DIR = 'Extracted_Features_Batch';
