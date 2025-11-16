@@ -1,0 +1,80 @@
+% ECG Preprocessing and Feature Extraction Pipeline (MATLAB)
+% ----------------------------------------------------------
+% Steps:
+% 1. Load ECG signals from directories containing *.hea and *.dat files
+% 2. Visualize leads
+% 3. Band-pass filter (0.5–40 Hz)
+% 4. Normalize using ROBUST MAD normalization
+% 5. R-peak detection
+% 6. Segment beats around R-peaks
+% 7. Extract wavelet features
+% 8. Save features to CSV
+
+clc; clear; close all;
+
+% --- DEFINIÇÕES PARA PROCESSAMENTO EM LOTE ---
+BASE_DIR = '../main_db/';
+%load('../main_db/ecg_db_patient_01/')
+% Lista dos diretórios dos pacientes
+Patient_Dirs = {'ecg_db_patient_01', 'ecg_db_patient_01-1', 'ecg_db_patient_02', 'ecg_db_patient_03', 'ecg_db_patient_04', 'ecg_db_patient_04-1'}; 
+
+% Lista dos nomes base dos sinais (sem extensão)
+%Signal_Names = {'s0010_re', 's0014lre', 's0016lre', 's0015lre', 's0017lre', 's0020are', 's0020bre'}; % Exemplo dos três sinais
+
+% Inicializa a tabela mestre de resultados (FORA DO LOOP!)
+Feature_Master_Table = table(); 
+
+% Diretório para salvar as features
+OUTPUT_DIR = 'Extracted_Features_Batch';
+if ~exist(OUTPUT_DIR, 'dir')
+    mkdir(OUTPUT_DIR);
+end
+
+%%
+% Parâmetros do Sinal (Assumindo que são FIXOS para todos os arquivos)
+Fs = 1000; % Frequência de amostragem em Hz
+T = 1/Fs;  % Período de amostragem
+num_samples = 38400; % Número de amostras (VERIFICAR SE É FIXO!)
+lead_index = 2; % Lead 'II' (fixo, índice 2)
+
+% Ganho e Baseline (FIXOS, mas IDEALMENTE LIDOS DO .HEA)
+Gain = 2000; 
+Baseline = -458; 
+
+%% 2. LOOP PRINCIPAL DE PROCESSAMENTO
+
+disp('=== INICIANDO PROCESSAMENTO EM LOTE ===');
+
+
+for(patient = 1 :length(Patient_Dirs))
+    
+    Patient_Dir = Patient_Dirs{patient};
+    Patient_ID = Patient_Dir; 
+
+    % --- NOVO BLOCO: LER SINAIS DO DIRETÓRIO ---
+    
+    % 1. Constrói o caminho completo da pasta do paciente
+    Patient_Path = fullfile(BASE_DIR, Patient_Dir);
+    
+    % 2. Lista todos os arquivos .hea neste diretório
+    files_found = dir(fullfile(Patient_Path, '*.hea'));
+    
+    % 3. Load the files in format .hea and .dat
+    % Load the signal
+    for(signal = 1:length(files_found))
+
+         % Load the file class
+        loadFile = LoadFiles(BASE_DIR, OUTPUT_DIR, Patient_Path, "", []);
+
+        File_Name_Full = files_found(signal).name;
+        
+        % Extract the base name
+        [header_file, data_file_dat, data_file_xyz] = loadFile.get_files(File_Name_Full);
+        
+        ecg_dig_process = ECGSignalPreprocessing(signal, Fs);
+
+        read_dat_file(obj);
+
+    end
+
+end

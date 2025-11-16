@@ -51,6 +51,11 @@ for p = 1:length(Patient_Dirs)
     
     % 2. Lista todos os arquivos .hea neste diretório
     files_found = dir(fullfile(Patient_Path, '*.hea'));
+
+    if isempty(files_found)
+        warning("Nenhum arquivo .hea encontrado em %s", Patient_Path);
+        continue;
+    end
     
     % 3. Loop sobre os arquivos ENCONTRADOS
     for s = 1:length(files_found)

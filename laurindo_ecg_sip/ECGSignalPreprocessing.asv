@@ -1,0 +1,94 @@
+% This is the pre-processing class
+
+classdef ECGSignalPreprocessing
+    
+    % Class properties
+    properties
+        % Define parameters
+        signal
+        TIME % Period
+        Fs % Sample frequency
+        num_samples
+        lead_index
+        Gain
+        Baseline 
+    end
+    %%
+    % Define the pre-processing methods
+    methods
+        % ---------------------- Constructor ----------------------
+        function obj = ECGSignalPreprocessing(signal, Fs, time, num_samples, lead_index, Gain, Baseline)
+            obj.signal = signal;
+            obj.Fs = Fs;
+            obj.TIME = time;
+            obj.num_samples = num_samples;
+            obj.lead_index = lead_index;
+            obj.Gain = Gain;
+            obj.Baseline = Baseline;
+        end
+        
+        %% Read '.dat' file
+        function [time, ECG_mV, ECG_raw, data_xyz_int] = read_dat_file(obj, data_file_xyz, data_file_dat)
+            %try
+            %
+            % Tentativa de leitura do arquivo .dat
+            fid = fopen(data_file_dat, 'r');
+            % NOTE: A dimensão [12, num_samples] é arriscada. O certo é usar fseek ou WFDB.
+            data_int = fread(fid, [12, obj.num_samples], 'int16'); 
+            fclose(fid);
+            
+            % Leitura do arquivo .xyz (opcional, mas mantida)
+            fid_xyz = fopen(data_file_xyz, 'r');
+            data_xyz_int = fread(fid_xyz, [3, obj.num_samples], 'int16'); 
+            fclose(fid_xyz);
+
+            ECG_raw = data_int(obj.lead_index, :);
+            ECG_mV = (ECG_raw - obj.Baseline) / obj.Gain; 
+            
+            % Gera o vetor de tempo
+            num_samples_current = length(ECG_mV);
+            time = (0:num_samples_current-1)*obj.TIME;
+
+            % catch ME
+            %    sms = displayErrorMessage(ME, Signal_Name, Patient_ID);
+            %    %continue; % Pula para o próximo arquivo se a leitura falhar
+            % end
+        end
+
+        % ---------------------- Band-pass Filter ----------------------
+        function y = bandpass_filter(obj, lowcut, highcut)
+            % 4th-order Butterworth band-pass filter
+            [b,a] = butter(4, [lowcut highcut] / (obj.Fs/2), 'bandpass');
+            y = filtfilt(b,a,obj.signal);
+        end
+
+        %% get the signal details
+        function [timeVect, num_leads] = signal_details(obj, fields)
+            % =====================================================
+            %    DETALHES DO SINAL
+            % =====================================================
+            
+            fs = fields.fs;                   % amostragem real do arquivo
+            [obj.num_samples, num_leads] = size(sig);
+    
+            fprintf("     -> Leads: %d | Amostras: %d | Fs: %d Hz\n", ...
+                    num_leads, obj.num_samples, fs);
+    
+            timeVect = (0:obj.num_samples-1) / fs;       % vetor de tempo
+        end
+        
+        % ---------------------- Robust MAD Normalization ----------------------
+        function y = normalize_mad(obj)
+            % Median Absolute Deviation normalization
+            med = median(obj.signal);
+            mad_val = median(abs(obj.signal - med));
+            y = (obj.signal - med) / mad_val;
+        end
+
+
+
+    
+    end
+    % Methods end
+
+end 
