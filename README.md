@@ -15,7 +15,7 @@ ECG records are stored in **WFDB format**, with information in a `.hea` header f
 
 * Sampling frequency:
 $$
-  F_s [\text{Hz}]
+  [F_s [\text{Hz}]]
 $$
 
 * Number of samples:
@@ -31,9 +31,7 @@ $$
 
 Raw signal (x_i[n]) is converted to mV by:
 
-$$
-[\text{ECG}_i[n] = \frac{x_i[n] - B_i}{G_i}]
-$$
+$[\text{ECG}_i[n] = \frac{x_i[n] - B_i}{G_i}]$
 
 This ensures that each lead has proper physical units.
 
@@ -46,17 +44,19 @@ This ensures that each lead has proper physical units.
 Baseline drift is removed using a **Butterworth high-pass filter**:
 
 $$
-[H(z) = \frac{b_0 + b_1 z^{-1} + b_2 z^{-2}}{1 + a_1 z^{-1} + a_2 z^{-2}}]
+H(z) = \frac{b_0 + b_1 z^{-1} + b_2 z^{-2}}{1 + a_1 z^{-1} + a_2 z^{-2}}
 $$
 
 Typical cutoff:
+
 $$
-[f_c = 0.5;\text{Hz}]
+f_c = 0.5;\text{Hz}
 $$
 
 Digital filtering operation:
+
 $$
-[y[n] = \sum_{k=0}^{M} b_k x[n-k] - \sum_{m=1}^{N} a_m y[n-m]]
+y[n] = \sum_{k=0}^{M} b_k x[n-k] - \sum_{m=1}^{N} a_m y[n-m]
 $$
 
 ---
@@ -65,16 +65,15 @@ $$
 
 
 If the power-line frequency is 
-$$ (f_0 = 50\text{ or }60\text{ Hz}) $$:
+
+$ (f_0 = 50\text{ or }60\text{ Hz}) $ 
 
 $$
-[H_{\text{notch}}(e^{j\omega}) = 1 - \frac{2\cos(\omega_0)}{1 - 2r\cos(\omega_0) + r^2} e^{-j\omega}]
+H_{\text{notch}}(e^{j\omega}) = 1 - \frac{2\cos(\omega_0)}{1 - 2r\cos(\omega_0) + r^2} e^{-j\omega}
 $$
 
-where
-$$
-[\omega_0 = 2\pi f_0 / F_s]
-$$
+where: 
+$\omega_0 = 2\pi f_0 / F_s$
 
 ---
 
