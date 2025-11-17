@@ -13,9 +13,9 @@ This documentation describes the **mathematical foundations** behind each signal
 
 ECG records are stored in **WFDB format**, with information in a `.hea` header file:
 
-* Sampling frequency:$$F_s \text{Hz}$$
+* Sampling frequency:$$\mathbf{F}_s \text{ Hz}$$
 
-* Number of samples: $$ N $$
+* Number of samples: $$\text{N} $$
 
 * For each lead (i):
 
@@ -25,9 +25,9 @@ ECG records are stored in **WFDB format**, with information in a `.hea` header f
 
 ### 1.1 Conversion from ADC counts to millivolts
 
-Raw signal (x_i[n]) is converted to mV by:
+Raw signal $$(x_i[n])$$ is converted to mV by:
 
-$\text{ECG}_i[n] = \frac{x_i[n] - B_i}{G_i}$
+$$\text{ECG}_i[n] = \frac{x_i[n] - B_i}{G_i}$$
 
 This ensures that each lead has proper physical units.
 
@@ -60,16 +60,14 @@ $$
 ## 2.2 **Power-Line Noise Removal (Notch Filter)**
 
 
-If the power-line frequency is 
-
-$ (f_0 = 50\text{ or }60\text{ Hz}) $ 
+If the power-line frequency is $$(f_0 = 50\text{ or }60\text{ Hz})$$ 
 
 $$
 H_{\text{notch}}(e^{j\omega}) = 1 - \frac{2\cos(\omega_0)}{1 - 2r\cos(\omega_0) + r^2} e^{-j\omega}
 $$
 
 where: 
-$\omega_0 = 2\pi f_0 / F_s$
+$$\omega_0 = 2\pi f_0 / F_s$$
 
 ---
 
@@ -77,11 +75,9 @@ $\omega_0 = 2\pi f_0 / F_s$
 
 The robust normalization uses the **median** and **median absolute deviation (MAD)**:
 
-$$
-m = \text{median}(x[n])
+$$\text{m = median}(x[n])$$
 
-\text{MAD} = \text{median}(|x[n] - m|)
-$$
+$$\text{MAD} = \text{median}(|x[n] - m|)$$
 
 Normalized signal:
 
@@ -130,7 +126,7 @@ Although simplified filters are used, the basic operation is:
 
 Energy function:
 $$
-E[n] = \sum_{k=0}^{W-1} x^2[n - k]
+\text{E[n] = \sum_{k=0}^{W-1} x^2[n - k]}
 $$
 
 Peaks above a threshold are labeled as R-peaks.
@@ -234,9 +230,7 @@ $$
 
 Fractal dimension (D) is slope:
 
-$$
-\log(L(k)) = -D \log(k) + C
-$$
+$$\text{\log(L(k)) = -D \log(k) + C}$$
 ---
 
 ## 7.3 **Katz Fractal Dimension**
@@ -256,7 +250,7 @@ where
 
 Using the Fourier Transform:
 $$
-X[k] = \sum_{n=0}^{N-1} x[n] e^{-j2\pi kn/N}
+\text{X[k] = \sum_{n=0}^{N-1} x[n] e^{-j2\pi kn/N}}
 $$
 
 Power spectrum:
