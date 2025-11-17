@@ -13,133 +13,146 @@ run_ecg_batch_processing();
 
 %% ======================= MAIN SCRIPT ================================
 function run_ecg_batch_processing()
-clc; clear; close all;
+    clc; clear; close all;
+    
+    
+    BASE_DIR = '../main_db/';
+    Patient_Dirs = {
+        'ecg_db_patient_01' 
+        %'ecg_db_patient_02'
+        %'ecg_db_patient_03',
+        %'ecg_db_patient_04'
+    };
 
 
-BASE_DIR = '../main_db/';
-Patient_Dirs = {'ecg_db_patient_01', ...
-'ecg_db_patient_02', 'ecg_db_patient_03', };
+    OUTPUT_DIR = 'Extracted_Features_Batch';
+    if ~exist(OUTPUT_DIR, 'dir'), mkdir(OUTPUT_DIR); end
+    
+    Feature_Master = table();
+    
+    total_patients = length(Patient_Dirs);
+    total_signals = 0;
+    total_leads_processed = 0;
+
+    
+    disp('=== STARTING BATCH ECG PROCESSING ===');
+    
+    
+    for p = 1:length(Patient_Dirs)
+        patient_path = fullfile(BASE_DIR, Patient_Dirs{p});
+        [Feature_Master, sig_count, leads_count] = process_patient_folder(patient_path, Patient_Dirs{p}, Feature_Master, OUTPUT_DIR);
+        total_signals = total_signals + sig_count;
+        total_leads_processed = total_leads_processed + leads_count;
+    end
 
 
-OUTPUT_DIR = 'Extracted_Features_Batch';
-if ~exist(OUTPUT_DIR, 'dir'), mkdir(OUTPUT_DIR); end
+    fprintf('Total Patients: %d\n', total_patients);
+    fprintf('Total Signals Processed: %d\n', total_signals);
+    fprintf('Total Leads Processed: %d\n', total_leads_processed);
+    
+    
+    disp('=== BATCH PROCESSING COMPLETE ===');
+    disp(Feature_Master(1:min(5, height(Feature_Master)), :));
+    
+    % Save all features of all detected signals
+    
+    writetable(Feature_Master, fullfile(OUTPUT_DIR, 'ECG_Features_Master_Summary.csv'));
 
-
-Feature_Master = table();
-
-
-total_patients = length(Patient_Dirs);
-total_signals = 0;
-total_leads_processed = 0;
-
-
-disp('=== STARTING BATCH ECG PROCESSING ===');
-
-
-for p = 1:length(Patient_Dirs)
-patient_path = fullfile(BASE_DIR, Patient_Dirs{p});
-[Feature_Master, sig_count, leads_count] = process_patient_folder(patient_path, Patient_Dirs{p}, Feature_Master, OUTPUT_DIR);
-total_signals = total_signals + sig_count;
-total_leads_processed = total_leads_processed + leads_count;
-end
-
-
-fprintf('Total Patients: %d\n', total_patients);
-fprintf('Total Signals Processed: %d\n', total_signals);
-fprintf('Total Leads Processed: %d\n', total_leads_processed);
-
-
-disp('=== BATCH PROCESSING COMPLETE ===');
-disp(Feature_Master(1:min(5, height(Feature_Master)), :));
-
-
-writetable(Feature_Master, fullfile(OUTPUT_DIR, 'ECG_Features_Master_Summary.csv'));
 end
 
 %% ======================= PATIENT PROCESSOR UPDATED ====================
 
 function [Feature_Master, signal_counter, lead_count_total] = process_patient_folder(patient_path, patient_id, Feature_Master, OUTPUT_DIR)
-files = dir(fullfile(patient_path, '*.hea'));
-if isempty(files)
-warning('No .hea files in %s', patient_path);
-signal_counter = 0;
-lead_count_total = 0;
-return;
+    files = dir(fullfile(patient_path, '*.hea'));
+    
+    if isempty(files)
+        warning('No .hea files in %s', patient_path);
+        signal_counter = 0;
+        lead_count_total = 0;
+        return;
+    end
+
+    signal_counter = 0;
+    lead_count_total = 0;
+    
+    patient_output_dir = fullfile(OUTPUT_DIR, patient_id);
+
+    if ~exist(patient_output_dir, 'dir'), mkdir(patient_output_dir); end
+
+
+    for k = 1:length(files)
+    signal_name = erase(files(k).name, '.hea');
+    header_file = fullfile(patient_path, [signal_name '.hea']);
+    
+    
+    [Fs, num_samples, lead_names, gains, baselines] = parse_wfdb_header(header_file);
+    
+    
+    signal_feature_table = table();
+    
+    for lead_idx = 1:length(lead_names)
+    
+        [t, ecg_mV, success] = read_ecg_signal(patient_path, signal_name, num_samples, lead_idx, gains(lead_idx), baselines(lead_idx), Fs);
+        
+        if ~success, continue; end
+    
+            
+            % Filtering the ECG signal by removing noises
+            ecg_filtered = remove_artefacts_2(ecg_mV, Fs);
+    
+            % -- Normalizing the ECG signal using a robust and recommended
+            % function
+            ecg_norm = NormalizeSignal.robust_normalize(ecg_filtered);
+    
+    
+            % --- ECG Signal Segmentation ---
+            segment_length_s = 10; % 10-second segments
+            segment_samples = segment_length_s * Fs;
+            num_segments = floor(length(ecg_norm)/segment_samples);
+    
+        for seg_idx = 1:num_segments
+    
+            seg_start = (seg_idx-1)*segment_samples + 1;
+            seg_end = seg_idx*segment_samples;
+            segment_ecg = ecg_norm(seg_start:seg_end);
+            segment_t = t(seg_start:seg_end);
+    
+    
+            % Feature extraction per segment
+            features = extract_features_all(segment_ecg, segment_t, Fs);
+    
+    
+            % Build row
+            row = table({patient_id}, {signal_name}, lead_idx, {lead_names{lead_idx}}, seg_idx, features.BPM, features.SDNN, ...
+            features.EnTotal, features.EnD5, features.Hurst, features.Higuchi, features.Katz, ...
+            'VariableNames', {'Patient_ID','Signal_Name','Lead_Index','Lead_Name','Segment_Index','BPM_avg','SDNN','En_Total','En_D5','Hurst_Exp','Higuchi_FD','Katz_FD'});
+            
+            
+            Feature_Master = [Feature_Master; row];
+            signal_feature_table = [signal_feature_table; row];
+        end
+    
+    
+            % Visualization
+            PlotSignal.plot_ecg_overview(t, ecg_mV, ecg_filtered, [signal_name ' - ' lead_names{lead_idx}]);
+            factor = 5;
+            [ecg_comp, ratio] = compress_signal(ecg_filtered, factor);
+            t_comp = t(1:factor:end);
+            PlotSignal.plot_compression(t, ecg_filtered, t_comp, ecg_comp, [signal_name ' - ' lead_names{lead_idx}]);
+            
+            
+            signal_counter = signal_counter + 1;
+            lead_count_total = lead_count_total + 1;
+    end
+
+        % Save per-signal feature table
+        if ~isempty(signal_feature_table)
+            signal_output_file = fullfile(patient_output_dir, [signal_name '_features.csv']);
+            writetable(signal_feature_table, signal_output_file);
+        end
+    end
 end
 
-
-signal_counter = 0;
-lead_count_total = 0;
-
-
-patient_output_dir = fullfile(OUTPUT_DIR, patient_id);
-if ~exist(patient_output_dir, 'dir'), mkdir(patient_output_dir); end
-
-
-for k = 1:length(files)
-signal_name = erase(files(k).name, '.hea');
-header_file = fullfile(patient_path, [signal_name '.hea']);
-
-
-[Fs, num_samples, lead_names, gains, baselines] = parse_wfdb_header(header_file);
-
-
-signal_feature_table = table();
-
-for lead_idx = 1:length(lead_names)
-[t, ecg_mV, success] = read_ecg_signal(patient_path, signal_name, num_samples, lead_idx, gains(lead_idx), baselines(lead_idx), Fs);
-if ~success, continue; end
-
-
-ecg_filtered = remove_artefacts_2(ecg_mV, Fs);
-ecg_norm = robust_normalize(ecg_filtered);
-
-
-% --- Signal Segmentation ---
-segment_length_s = 10; % 10-second segments
-segment_samples = segment_length_s * Fs;
-num_segments = floor(length(ecg_norm)/segment_samples);
-for seg_idx = 1:num_segments
-seg_start = (seg_idx-1)*segment_samples + 1;
-seg_end = seg_idx*segment_samples;
-segment_ecg = ecg_norm(seg_start:seg_end);
-segment_t = t(seg_start:seg_end);
-
-
-% Feature extraction per segment
-features = extract_features_all(segment_ecg, segment_t, Fs);
-
-
-% Build row
-row = table({patient_id}, {signal_name}, lead_idx, {lead_names{lead_idx}}, seg_idx, features.BPM, features.SDNN, ...
-features.EnTotal, features.EnD5, features.Hurst, features.Higuchi, features.Katz, ...
-'VariableNames', {'Patient_ID','Signal_Name','Lead_Index','Lead_Name','Segment_Index','BPM_avg','SDNN','En_Total','En_D5','Hurst_Exp','Higuchi_FD','Katz_FD'});
-
-
-Feature_Master = [Feature_Master; row];
-signal_feature_table = [signal_feature_table; row];
-end
-
-
-% Visualization
-plot_ecg_overview(t, ecg_mV, ecg_filtered, [signal_name ' - ' lead_names{lead_idx}]);
-factor = 5;
-[ecg_comp, ratio] = compress_signal(ecg_filtered, factor);
-t_comp = t(1:factor:end);
-plot_compression(t, ecg_filtered, t_comp, ecg_comp, [signal_name ' - ' lead_names{lead_idx}]);
-
-
-signal_counter = signal_counter + 1;
-lead_count_total = lead_count_total + 1;
-end
-
-% Save per-signal feature table
-if ~isempty(signal_feature_table)
-signal_output_file = fullfile(patient_output_dir, [signal_name '_features.csv']);
-writetable(signal_feature_table, signal_output_file);
-end
-end
-end
 %% ======================= HEADER PARSER ===============================
 function [Fs, num_samples, lead_names, gains, baselines] = parse_wfdb_header(header_file)
     fid = fopen(header_file,'r');
@@ -196,11 +209,11 @@ end
 end
 
 %% ======================= ROBUST NORMALIZATION ========================
-function ecg_norm = robust_normalize(ecg)
-    med = median(ecg);
-    mad_val = mad(ecg,1);
-    ecg_norm = (ecg - med)/mad_val;
-end
+% function ecg_norm = robust_normalize(ecg)
+%     med = median(ecg);
+%     mad_val = mad(ecg,1);
+%     ecg_norm = (ecg - med)/mad_val;
+% end
 
 %% ======================= FEATURE EXTRACTION ==========================
 function F = extract_features_all(ecg, t, Fs)
@@ -225,11 +238,6 @@ function F = extract_features_all(ecg, t, Fs)
 end
 
 %% ======================= VISUALIZATION ===============================
-function plot_ecg_overview(t, raw, filtered, title_name)
-    figure('Name',['ECG - ' title_name],'NumberTitle','off');
-    subplot(2,1,1); plot(t, raw); title(['Raw ECG - ' title_name]); xlabel('Time (s)'); ylabel('mV'); grid on;
-    subplot(2,1,2); plot(t, filtered); title('Filtered ECG'); xlabel('Time (s)'); ylabel('mV'); grid on;
-end
 
 function plot_normalization_comparison(t, raw, norm_sig, title_name)
     figure('Name',['Normalization - ' title_name],'NumberTitle','off');
@@ -243,11 +251,11 @@ function [comp, ratio] = compress_signal(ecg, factor)
     ratio = length(ecg)/length(comp);
 end
 
-function plot_compression(t, ecg, t2, compressed, title_name)
-    figure('Name',['Compression - ' title_name],'NumberTitle','off');
-    subplot(2,1,1); plot(t, ecg); title('Original ECG'); grid on;
-    subplot(2,1,2); plot(t2, compressed); title('Compressed ECG'); grid on;
-end
+% function plot_compression(t, ecg, t2, compressed, title_name)
+%     figure('Name',['Compression - ' title_name],'NumberTitle','off');
+%     subplot(2,1,1); plot(t, ecg); title('Original ECG'); grid on;
+%     subplot(2,1,2); plot(t2, compressed); title('Compressed ECG'); grid on;
+% end
 
 %% ======================= FREQUENCY ANALYSIS ==========================
 function plot_frequency_analysis(ecg, Fs, title_name)
