@@ -4,6 +4,8 @@
 %   - Automatic header parsing
 %   - Artifact removal
 %   - Robust normalization
+%   - Signal Aplification (Was not done because is not recomended)
+%   - Signal segmentation
 %   - Feature extraction (time, wavelet, fractals)
 %   - Signal compression & visualization
 %   - Total signals & leads reporting
@@ -143,6 +145,9 @@ function [Feature_Master, signal_counter, lead_count_total] = process_patient_fo
             
             signal_counter = signal_counter + 1;
             lead_count_total = lead_count_total + 1;
+
+            %%
+             PlotSignal.plot_frequency_analysis(ecg_mV, Fs, signal_name);
     end
 
         % Save per-signal feature table
@@ -226,7 +231,9 @@ function F = extract_features_all(ecg, t, Fs)
     cA = appcoef(C,L,'db4',5);
     EnA = sum(cA.^2);
     EnD_total = 0;
+
     for i=1:5, cD = detcoef(C,L,i); EnD_total = EnD_total + sum(cD.^2); end
+
     cD5 = detcoef(C,L,5);
     EnD5 = sum(cD5.^2);
 
@@ -251,22 +258,8 @@ function [comp, ratio] = compress_signal(ecg, factor)
     ratio = length(ecg)/length(comp);
 end
 
-% function plot_compression(t, ecg, t2, compressed, title_name)
-%     figure('Name',['Compression - ' title_name],'NumberTitle','off');
-%     subplot(2,1,1); plot(t, ecg); title('Original ECG'); grid on;
-%     subplot(2,1,2); plot(t2, compressed); title('Compressed ECG'); grid on;
-% end
 
-%% ======================= FREQUENCY ANALYSIS ==========================
-function plot_frequency_analysis(ecg, Fs, title_name)
-    L = length(ecg);
-    f = Fs*(0:(L/2))/L;
-    Y = fft(ecg);
-    P = abs(Y/L);
-    P1 = P(1:L/2+1);
-    figure('Name',['Frequency Spectrum - ' title_name],'NumberTitle','off');
-    plot(f, P1); grid on; title('ECG Frequency Spectrum'); xlabel('Hz'); ylabel('Amplitude');
-end
+
 
 %% ======================= SIGNAL ANALYZER =============================
 function open_signal_analyzer(ecg, Fs)

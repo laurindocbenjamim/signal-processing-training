@@ -1,0 +1,502 @@
+% function run_ecg_project()
+% 
+%     clc; clear; close all;
+% 
+%     BASE_DIR = '../main_db/';
+%     OUTPUT_DIR = 'Extracted_Features_Batch';
+%     if ~exist(OUTPUT_DIR, 'dir')
+%         mkdir(OUTPUT_DIR);
+%     end
+% 
+%     Patient_Dirs = {'ecg_db_patient_01',
+%         %'ecg_db_patient_02',
+%         %'ecg_db_patient_03'
+%         };
+% 
+%     Feature_Master_1s = table();
+%     Feature_Master_10s = table();
+% 
+%     fprintf("=== STARTING ECG PROJECT ===\n");
+% 
+%     for p = 1:length(Patient_Dirs)
+% 
+%         patient_path = fullfile(BASE_DIR, Patient_Dirs{p});
+%         hea_files = dir(fullfile(patient_path, '*.hea'));
+% 
+%         for f = 1:length(hea_files)
+% 
+%             signal_name = erase(hea_files(f).name, '.hea');
+% 
+%             % Parse header
+%             header = parse_wfdb_header(fullfile(patient_path, hea_files(f).name));
+%             Fs = header.fs;
+%             num_leads = header.num_leads;
+% 
+%             % Load ECG
+%             [t, ecg_all_leads] = read_ecg_multilead(patient_path, signal_name, header);
+% 
+%             disp("Signal");
+%             disp(signal_name);
+%             disp("Number of Leads: ");
+%             disp(num_leads);
+% 
+%             % Process each lead
+%             for L = 1:num_leads
+% 
+%                 ecg = ecg_all_leads(L,:);
+% 
+%                 % === SEGMENTATION: 1-second (1000 samples) ===
+%                 % segments = segment_ecg(ecg, Fs, 1);   % cell array
+%                 % num_segments = length(segments);
+%                 % 
+%                 % 
+%                 % disp("Total of segments with 1s windows: ");
+%                 % disp(num_segments);
+% 
+%                 % % === PROCESS 1s SEGMENTS & 10s WINDOWS ===
+%                 % for s = 1:num_segments
+%                 % 
+%                 %     seg = segments{s};
+%                 % 
+%                 %     % ---- DWT Subbands ----
+%                 %     subbands = dwt_subbands(seg);
+%                 % 
+%                 %     % ---- Extract Features ----
+%                 %     [En_vec, HFD_vec] = extract_features_from_subbands(subbands);
+%                 % 
+%                 %     % Save per 1s segment
+%                 %     Feature_Master_1s = [
+%                 %         Feature_Master_1s;
+%                 %         create_row(Patient_Dirs{p}, signal_name, L, s, En_vec, HFD_vec)
+%                 %     ];
+%                 % end
+%                 % 
+%                 % % === PROCESS 10s WINDOWS ===
+%                 windows = segment_ecg(ecg, Fs, 5);  
+%                 num_windows = length(windows);
+%                 disp("Total of segments with 5s Windows: ");
+%                 disp(num_windows);
+% 
+%                 for w = 1:num_windows
+% 
+%                     win = windows{w};
+% 
+%                     subbands_win = dwt_subbands(win);
+%                     [En_vec_w, HFD_vec_w] = extract_features_from_subbands(subbands_win);
+% 
+%                     Feature_Master_10s = [
+%                         Feature_Master_10s;
+%                         create_row_10s(Patient_Dirs{p}, signal_name, L, w, En_vec_w, HFD_vec_w)
+%                     ];
+% 
+%                 end
+% 
+%             end % leads
+%         end % signals
+%     end % patients
+% 
+%     % SAVE RESULTS
+%     writetable(Feature_Master_1s, fullfile(OUTPUT_DIR,'ECG_Features_1s.csv'));
+%     writetable(Feature_Master_10s, fullfile(OUTPUT_DIR,'ECG_Features_10s.csv'));
+% 
+%     fprintf("=== PROCESSING COMPLETE ===\n");
+% 
+% end
+
+
+%%
+
+%% ============================================================
+% MAIN PIPELINE – PTB ECG Processing (5-second segments)
+% ============================================================
+
+clear; clc; close all;
+
+BASE_DIR = '../main_db/';
+OUTPUT_DIR = './Extracted_Features_Batch';
+mkdir(OUTPUT_DIR);
+
+WINDOW_SEC = 1;   % <<< CHANGE HERE (1,5,10 seconds)
+WAVELET_NAME = 'sym7';
+S = 3;  % decomposition levels
+
+Patient_Folders = dir(BASE_DIR); % Get a list of all files and folders in the BASE_DIR
+Patient_Folders = Patient_Folders([Patient_Folders.isdir]); % Filter to keep only directories
+Patient_Folders = Patient_Folders(~ismember({Patient_Folders.name},{'.','..'})); % Remove the current (.) and parent (..) directory entries
+
+Feature_Master_1s = []; % Initialize an empty array to store features extracted from 1-second segments
+Feature_Master_10s = []; % Initialize an empty array to store features extracted from 10-second segments
+
+ecg="";
+Fs=0;
+for p = 1:length(Patient_Folders)
+    patient_name = Patient_Folders(p).name;
+    patient_path = fullfile(BASE_DIR, patient_name);
+
+    hea_files = dir(fullfile(patient_path, '*.hea'));
+
+    for h = 1:length(hea_files)
+
+        signal_name = erase(hea_files(h).name, '.hea');
+
+        fprintf("\n>> Processing %s / %s\n", patient_name, signal_name);
+
+        % 1 — Parse header
+        header = parse_header(fullfile(patient_path, hea_files(h).name));
+
+        % 2 — Read signal
+        [t, X] = read_multilead(patient_path, signal_name, header);
+        
+        disp("Leads: ")
+        disp(header.num_leads)
+        % % 3 — Apply filtering per lead
+        % Initialize X_filt with the correct dimensions
+        [num_leads, num_samples] = size(X); 
+        X_filt = zeros(num_leads, num_samples); 
+        
+        for L = 1:num_leads % Use num_leads or header.num_leads
+            x = X(L,:);
+            
+            x = remove_baseline(x, header.fs);
+            x = notch_filter(x, header.fs, 50); % 50 Hz is used to remove power line interference, which is a common noise in ECG signals.
+            x = denoise_muscle(x, header.fs); % This function is used to reduce muscle noise that can contaminate the ECG signal.
+            x = bandpass_ecg(x, header.fs, [0.5 40]); % The bandpass filter allows frequencies between 0.5 Hz and 40 Hz to pass, which are relevant for ECG analysis, filtering out both low-frequency drift and high-frequency noise.
+            
+            % This line now assigns x to a pre-sized location in X_filt
+            X_filt(L,:) = x; 
+        end
+        
+        % 
+        % % 4 — Normalize each lead
+        X_norm = zeros(size(X_filt));
+
+        for L = 1:header.num_leads
+            X_norm(L,:) = NormalizeSignal.normalize_ecg(X_filt(L,:));
+        end
+        
+     
+        % % 5 — Segment into variable window (default 5 seconds)
+        segments = ECGSegmentation.segment_signal_2(X_norm, header.fs, WINDOW_SEC);
+        
+        fprintf("Sample Frequency: " + header.fs + " Hz");
+        fprintf("\n Segments: " + length(segments));
+       
+        features_all_segments = [];
+
+        for s = 1:length(segments)
+            segment = segments{s};
+
+            % 6 — DWT decomposition
+            subbands = dwt_decompose(segment, S, WAVELET_NAME);
+            subbands = resample_subbands(subbands, header.fs, s);
+            
+            % % 7 — Extract nonlinear features
+            % feats = extract_features(subbands);
+            % 
+            % features_all_segments = [features_all_segments; feats];
+        end
+        % 
+        % % 8 — Compress features
+        % compressed = compress_features(features_all_segments);
+        % 
+        % % add labels
+        % Row.Patient = {patient_name};
+        % Row.Signal  = {signal_name};
+        % Row.Features = compressed;
+        % 
+        % Feature_Master = [Feature_Master; Row];
+        % 
+        % % 9 — Save features
+        % save_features(patient_name, signal_name, compressed, OUTPUT_DIR);
+    end
+end
+
+PlotSignal.open_signal_analyzer(ecg, Fs);
+
+% 10 — Global z-score normalization
+% Feature_Master = NormalizeSignal.normalize_by_MAD(Feature_Master);
+% save(fullfile(OUTPUT_DIR,'Master_Features.mat'),'Feature_Master');
+
+fprintf("\n=== DONE. All signals processed. ===\n");
+
+
+%%
+
+function header = parse_wfdb_header(hea_path)
+
+    fid = fopen(hea_path);
+    first = fgetl(fid);
+    parts = split(first);
+
+    header.num_leads = str2double(parts{2});
+    header.fs = str2double(parts{3});
+
+    gains = zeros(1, header.num_leads);
+    baselines = zeros(1, header.num_leads);
+
+    for i = 1:header.num_leads
+        line = fgetl(fid);
+        L = split(line);
+
+        gains(i) = str2double(extractBefore(L{3}, '/'));
+        baselines(i) = str2double(extractBefore(L{4}, '/'));
+    end
+
+    header.gains = gains;
+    header.baselines = baselines;
+
+    fclose(fid);
+
+end
+
+
+%%
+function [t, ecg_leads] = read_ecg_multilead(path, name, header)
+
+    dat_file = fullfile(path, name + ".dat");
+    fid = fopen(dat_file, 'r');
+    raw = fread(fid, [header.num_leads, Inf], 'int16');
+    fclose(fid);
+
+    ecg_leads = zeros(size(raw));
+
+    for L = 1:header.num_leads
+        ecg_leads(L,:) = (raw(L,:) - header.baselines(L)) / header.gains(L);
+    end
+
+    N = size(ecg_leads, 2);
+    t = (0:N-1)/header.fs;
+
+end
+
+
+%%
+function segments = segment_ecg(signal, Fs, length_s)
+    % FUNCTION: segment_ecg - Divides a continuous ECG signal into fixed-length segments
+    % INPUTS:
+    %   signal  - raw ECG signal vector
+    %   Fs      - sampling frequency (samples per second)
+    %   length_s - desired segment length in seconds
+    
+    len = length_s * Fs;
+    % Convert segment length from seconds to samples
+    % Multiply desired time length by sampling frequency to get samples
+    
+    N = length(signal);
+    % Get total number of samples in the input signal
+    
+    num_segments = floor(N / len);
+    % Calculate maximum number of complete segments that fit in the signal
+    % Use floor() to discard any partial segment at the end
+    
+    segments = cell(1, num_segments);
+    % Pre-allocate a cell array to store all segments
+    % Cell array allows storing vectors of different lengths (though here they're same)
+    
+    idx = 1;
+    % Initialize starting index for the first segment
+    
+    for i = 1:num_segments
+        % Loop through each segment to extract from the original signal
+        
+        segments{i} = signal(idx : idx + len - 1);
+        % Extract one segment: from current index to index+len-1
+        % The -1 ensures we get exactly 'len' samples
+        
+        idx = idx + len;
+        % Move the starting index forward by segment length for next iteration
+        % This creates non-overlapping, consecutive segments
+        
+    end
+
+end
+
+
+%%
+
+function [pass, reason] = artifact_qc(ecg_leads, Fs)
+% Basic QC for PTB-style 10s ECG signals (ecg_leads: L x N)
+% Returns pass = true/false; reason = string describing failure.
+
+pass = true;
+reason = '';
+[L, N] = size(ecg_leads);
+
+% Device nominal amplitude (given in paper): +/-16 mV
+AMP_LIMIT = 16; % mV
+
+% Check for NaNs or Infs
+if any(isnan(ecg_leads(:))) || any(isinf(ecg_leads(:)))
+    pass = false; reason = 'NaN_or_Inf';
+    return;
+end
+
+% Check amplitude exceed device input range (any lead)
+if any(abs(ecg_leads(:)) > AMP_LIMIT)
+    pass = false; reason = 'Amplitude_exceed_device_limit';
+    return;
+end
+
+% Flatline / clipped: too many identical consecutive samples
+max_flat_allowed = 0.5; % if >50% of samples are flat sequences -> reject
+flat_fraction_total = 0;
+for i = 1:L
+    diffs = diff(ecg_leads(i,:));
+    flat_runs = sum(diffs==0);
+    flat_fraction_total = flat_fraction_total + flat_runs / (N-1);
+end
+flat_fraction_avg = flat_fraction_total / L;
+if flat_fraction_avg > max_flat_allowed
+    pass = false; reason = 'Flatline_or_clipped';
+    return;
+end
+
+% Excessive high-frequency noise: measure relative std of derivative
+% Compute median absolute diff ratio across leads
+mad_ratio = zeros(1,L);
+for i = 1:L
+    d = diff(ecg_leads(i,:));
+    mad_ratio(i) = mad(d,1) / (mad(ecg_leads(i,:),1) + eps);
+end
+if mean(mad_ratio) > 0.5 % threshold tuned: if derivative variability is large relative to amplitude
+    pass = false; reason = 'High_freq_noise';
+    return;
+end
+
+% Check expected duration (PTB is 10s at 1000Hz)
+expected_N = 10000;
+if N < 0.9*expected_N   % allow slightly shorter (90%) but otherwise reject
+    pass = false; reason = 'Too_short';
+    return;
+end
+
+% Otherwise OK
+pass = true;
+reason = 'OK';
+end
+
+
+%%
+
+function diag_map = load_ptb_metadata(BASE_DIR)
+% Try to load ptb_diagnosis.csv (columns: record,diagnosis).
+% If not found, return empty map and caller will use 'Unknown'.
+diag_map = containers.Map();
+meta_file = fullfile(BASE_DIR, 'ptb_diagnosis.csv');
+if exist(meta_file, 'file')
+    T = readtable(meta_file, 'TextType','string');
+    for i = 1:height(T)
+        rec = char(T.record{i});
+        diag = char(T.diagnosis{i});
+        diag_map(rec) = diag;
+    end
+else
+    % No metadata file found
+    diag_map = [];
+end
+end
+
+
+%%
+function row = create_row_10s(patient, signal, lead, win_id, En, HFD)
+
+    row = table({patient},{signal},lead,win_id, ...
+        En(1),En(2),En(3),En(4), ...
+        HFD(1),HFD(2),HFD(3),HFD(4), ...
+        'VariableNames',{'Patient','Signal','Lead','Window10s', ...
+        'En_A3','En_D3','En_D2','En_D1', ...
+        'HFD_A3','HFD_D3','HFD_D2','HFD_D1'});
+
+end
+
+
+
+%%
+function row = create_row(patient, signal, lead, seg_id, En, HFD)
+
+    row = table({patient},{signal},lead,seg_id, ...
+        En(1),En(2),En(3),En(4), ...
+        HFD(1),HFD(2),HFD(3),HFD(4), ...
+        'VariableNames',{'Patient','Signal','Lead','Segment', ...
+        'En_A3','En_D3','En_D2','En_D1', ...
+        'HFD_A3','HFD_D3','HFD_D2','HFD_D1'});
+
+end
+
+%%
+
+function H = higuchi_fd(x, Kmax)
+
+    N = length(x);
+    Lk = zeros(1, Kmax);
+
+    for k = 1:Kmax
+        Lmk = zeros(1, k);
+
+        for m = 1:k
+            idx = m:k:N;
+            L = sum(abs(diff(x(idx)))) * (N - 1) / ( (length(idx) - 1) * k);
+            Lmk(m) = L;
+        end
+
+        Lk(k) = mean(Lmk);
+    end
+
+    H = polyfit(log(1./(1:Kmax)), log(Lk), 1);
+    H = H(1);
+
+end
+
+
+%%
+
+function [En_vec, HFD_vec] = extract_features_from_subbands(sb)
+
+    bands = {sb.A3, sb.D3, sb.D2, sb.D1};
+    nb = length(bands);
+
+    En_vec = zeros(1, nb);
+    HFD_vec = zeros(1, nb);
+
+    for i = 1:nb
+
+        x = bands{i};
+
+        % Energy
+        En_vec(i) = sum(abs(x).^2);
+
+        % Higuchi FD
+        HFD_vec(i) = higuchi_fd(x, 10);
+
+    end
+
+end
+
+
+%%
+function subbands = dwt_subbands(seg)
+
+    wname = 'sym7';
+    lev = 3;
+
+    [C,L] = wavedec(seg, lev, wname);
+
+    subbands.A3 = appcoef(C, L, wname, 3);
+    subbands.D3 = detcoef(C, L, 3);
+    subbands.D2 = detcoef(C, L, 2);
+    subbands.D1 = detcoef(C, L, 1);
+
+    % Resample back to original length
+    N = length(seg);
+    subbands.A3 = resample(subbands.A3, N, length(subbands.A3));
+    subbands.D3 = resample(subbands.D3, N, length(subbands.D3));
+    subbands.D2 = resample(subbands.D2, N, length(subbands.D2));
+    subbands.D1 = resample(subbands.D1, N, length(subbands.D1));
+
+end
+
+
+%%
+
+
+

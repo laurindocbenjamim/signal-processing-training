@@ -26,6 +26,17 @@ classdef PlotSignal
             subplot(2,1,1); plot(t, ecg); title('Original ECG'); grid on;
             subplot(2,1,2); plot(t2, compressed); title('Compressed ECG'); grid on;
         end
+
+        %% ======================= FREQUENCY ANALYSIS ==========================
+        function plot_frequency_analysis(ecg, Fs, title_name)
+            L = length(ecg);
+            f = Fs*(0:(L/2))/L;
+            Y = fft(ecg);
+            P = abs(Y/L);
+            P1 = P(1:L/2+1);
+            figure('Name',['Frequency Spectrum - ' title_name],'NumberTitle','off');
+            plot(f, P1); grid on; title('ECG Frequency Spectrum'); xlabel('Hz'); ylabel('Amplitude');
+        end
         
         
         %% ======================= SIGNAL ANALYZER =============================
