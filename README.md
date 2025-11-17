@@ -134,7 +134,7 @@ Peaks above a threshold are labeled as R-peaks.
 
 ## 4.2 **Heart Rate (BPM)**
 
-If (RR_i) is the interval between peaks:
+If $$(RR_i)$$ is the interval between peaks:
 
 $$
 \text{BPM} = \frac{60}{\overline{RR}}
