@@ -13,7 +13,8 @@ This documentation describes the **mathematical foundations** behind each signal
 
 ECG records are stored in **WFDB format**, with information in a `.hea` header file:
 
-* Sampling frequency:$$\mathbf{F}_s \text{ Hz}$$
+* Sampling frequency:
+    $$F_s \text{ Hz}$$
 
 * Number of samples: $$\text{N} $$
 
@@ -125,9 +126,7 @@ Although simplified filters are used, the basic operation is:
 4. Moving window integration
 
 Energy function:
-$$
-\text{E[n] = \sum_{k=0}^{W-1} x^2[n - k]}
-$$
+$$E[n] = \sum_{k=0}^{W-1} x^2[n - k]$$
 
 Peaks above a threshold are labeled as R-peaks.
 
@@ -230,7 +229,7 @@ $$
 
 Fractal dimension (D) is slope:
 
-$$\text{\log(L(k)) = -D \log(k) + C}$$
+$$\log(L(k)) = -D \log(k) + C $$
 ---
 
 ## 7.3 **Katz Fractal Dimension**
@@ -249,9 +248,7 @@ where
 # 8. 🔊 **Frequency Analysis**
 
 Using the Fourier Transform:
-$$
-\text{X[k] = \sum_{n=0}^{N-1} x[n] e^{-j2\pi kn/N}}
-$$
+$$\mathbf{X}[k] = \sum_{n=0}^{N-1} x[n] e^{-j 2\pi k n/N}$$
 
 Power spectrum:
 
