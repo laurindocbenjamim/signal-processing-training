@@ -78,15 +78,15 @@ $\omega_0 = 2\pi f_0 / F_s$
 The robust normalization uses the **median** and **median absolute deviation (MAD)**:
 
 $$
-m = \text{median}(x[n])
+[m = \text{median}(x[n])]
 
-\text{MAD} = \text{median}(|x[n] - m|)
+[\text{MAD} = \text{median}(|x[n] - m|)]
 $$
 
 Normalized signal:
 
 $$
-x_{\text{norm}}[n] = \frac{x[n] - m}{\text{MAD}}
+[x_{\text{norm}}[n] = \frac{x[n] - m}{\text{MAD}}]
 $$
 
 This is resistant to outliers and artifacts.
@@ -98,19 +98,19 @@ This is resistant to outliers and artifacts.
 Signals are divided into fixed-length windows:
 
 $$
-\text{Segment length in samples} = L = T_{\text{seg}} \cdot F_s
+[\text{Segment length in samples} = L = T_{\text{seg}} \cdot F_s]
 $$
 
 If (x[n]) is the full signal:
 
 $$
-x_k[n] = x[n + kL], \qquad n = 0,1,\dots,L-1
+[x_k[n] = x[n + kL], \qquad n = 0,1,\dots,L-1]
 $$
 
 Each segment gets indexed:
 
 $$
-k = 1, 2, \dots, \left\lfloor \frac{N}{L} \right\rfloor
+[k = 1, 2, \dots, \left\lfloor \frac{N}{L} \right\rfloor]
 $$
 
 Feature extraction is applied **per segment**.
@@ -130,7 +130,7 @@ Although simplified filters are used, the basic operation is:
 
 Energy function:
 $$
-E[n] = \sum_{k=0}^{W-1} x^2[n - k]
+[E[n] = \sum_{k=0}^{W-1} x^2[n - k]]
 $$
 
 Peaks above a threshold are labeled as R-peaks.
@@ -142,7 +142,7 @@ Peaks above a threshold are labeled as R-peaks.
 If (RR_i) is the interval between peaks:
 
 $$
-\text{BPM} = \frac{60}{\overline{RR}}
+[\text{BPM} = \frac{60}{\overline{RR}}]
 $$
 
 ---
@@ -150,7 +150,7 @@ $$
 ## 4.3 **SDNN (Standard Deviation of RR Intervals)**
 
 $$
-\text{SDNN} = \sqrt{ \frac{1}{M-1} \sum_{i=1}^{M} (RR_i - \overline{RR})^2 }
+[\text{SDNN} = \sqrt{ \frac{1}{M-1} \sum_{i=1}^{M} (RR_i - \overline{RR})^2 }]
 $$
 
 ---
@@ -160,7 +160,7 @@ $$
 Given a compression factor (C):
 
 $$
-x_{\text{comp}}[n] = x[nC]
+[x_{\text{comp}}[n] = x[nC]]
 $$
 
 This reduces sample count while preserving general morphology.
@@ -174,19 +174,19 @@ Plots compare original vs. compressed signals.
 Using a discrete wavelet transform (DWT):
 
 $$
-x[n] \rightarrow A_j[n], D_j[n]
+[x[n] \rightarrow A_j[n], D_j[n]]
 $$
 
 Energy of detail coefficients:
 
 $$
-E_{D_j} = \sum_{n} D_j[n]^2
+[E_{D_j} = \sum_{n} D_j[n]^2]
 $$
 
 Total energy:
 
 $$
-E_{\text{total}} = \sum_{j} E_{D_j}
+[E_{\text{total}} = \sum_{j} E_{D_j}]
 $$
 
 ---
@@ -198,13 +198,13 @@ $$
 The rescaled range (R/S) over window size (n):
 
 $$
-\frac{R(n)}{S(n)} \propto n^H
+[\frac{R(n)}{S(n)} \propto n^H]
 $$
 
 Taking logs:
 
 $$
-\log(R/S) = H \log(n) + C
+[\log(R/S) = H \log(n) + C]
 $$
 
 Slope of fitted line gives (H).
@@ -216,32 +216,32 @@ Slope of fitted line gives (H).
 We build subsampled sequences:
 
 $$
-X_m^k = { x[m], x[m+k], x[m+2k], \dots }
+[X_m^k = { x[m], x[m+k], x[m+2k], \dots }]
 $$
 
 Compute curve length:
 
 $$
-L_m(k) = \frac{ (N-1)}{ \left\lfloor \frac{N-m}{k} \right\rfloor k^2 }
-\sum_{i=1}^{\left\lfloor \frac{N-m}{k} \right\rfloor} |x[m + ik] - x[m + (i-1)k]|
+[L_m(k) = \frac{ (N-1)}{ \left\lfloor \frac{N-m}{k} \right\rfloor k^2 }
+\sum_{i=1}^{\left\lfloor \frac{N-m}{k} \right\rfloor} |x[m + ik] - x[m + (i-1)k]|]
 $$
 
 Average over (m) values:
 
 $$
-L(k) = \frac{1}{k} \sum_{m=1}^{k} L_m(k)
+[L(k) = \frac{1}{k} \sum_{m=1}^{k} L_m(k)]
 $$
 
 Fractal dimension (D) is slope:
 
 $$
-\log(L(k)) = -D \log(k) + C
+[\log(L(k)) = -D \log(k) + C]
 $$
 ---
 
 ## 7.3 **Katz Fractal Dimension**
 $$
-D = \frac{\log(n)}{\log(n) + \log(d/L)}
+[D = \frac{\log(n)}{\log(n) + \log(d/L)}]
 $$
 
 where
@@ -256,13 +256,13 @@ where
 
 Using the Fourier Transform:
 $$
-X[k] = \sum_{n=0}^{N-1} x[n] e^{-j2\pi kn/N}
+[X[k] = \sum_{n=0}^{N-1} x[n] e^{-j2\pi kn/N}]
 $$
 
 Power spectrum:
 
 $$
-P[k] = |X[k]|^2
+[P[k] = |X[k]|^2]
 $$
 
 Useful for:
