@@ -47,3 +47,4 @@ end
 
 
 
+figure, plot(ECGFilteredNormalized{1,1})
