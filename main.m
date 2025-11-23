@@ -1,138 +1,212 @@
-clc;
-clear;
-close all;
+clear; close all; clc;
 
-%% 1) Database path
-base = '/Users/eli/Desktop/signal-processing-training-user02/main_db';
+%% Setup paths and choose record
 
-% List of patients and signal names
-records = { ...
-    'ecg_db_patient_01',   's0010_re';   ...
-    'ecg_db_patient_01',   's0014lre';   ...
-    'ecg_db_patient_01',   's0016lre';   ...
-    'ecg_db_patient_02',   's0015lre';   ...
-    'ecg_db_patient_03',   's0017lre';   ...
-    'ecg_db_patient_04',   's0020are';   ...
-    'ecg_db_patient_04-1', 's0020bre'    ...
-    };
+projectRoot = '/Users/eli/Desktop/signal processing project';
+addpath(genpath('/Users/eli/Desktop/signal-processing-training-user02/main_db'));
+cd(projectRoot);
 
-% Preallocate arrays for features
-LogEn_val   = [];
-ShaEn_val   = [];
-CorrDim_val = [];
-Patient_ID  = {};
-Signal_Name = {};
-Lead_Index  = [];
-Lead_Name   = {};
+patientFolder = 'ecg_db_patient_01';  
+recordName    = 's0010_re';           
+
+folderPath = fullfile(projectRoot, patientFolder);
+datFile    = fullfile(folderPath, [recordName '.dat']);
+heaFile    = fullfile(folderPath, [recordName '.hea']);
+
+fprintf('Reading %s / %s ...\n', patientFolder, recordName);
+
+%% Read header (.hea)
+
+fid = fopen(heaFile, 'r');
+if fid < 0
+    error('Cannot open .hea file: %s', heaFile);
+end
+headerLine = fgetl(fid);
+fclose(fid);
+
+headerInfo = strsplit(headerLine);
+numLeads   = str2double(headerInfo{2});
+Fs         = str2double(headerInfo{3});
+numSamples = str2double(headerInfo{4});
+
+fprintf('numLeads = %d, Fs = %.1f Hz\n', numLeads, Fs);
+
+%% Read raw signal from .dat (actual length)
+
+fid = fopen(datFile, 'r');
+if fid < 0
+    error('Cannot open .dat file: %s', datFile);
+end
+data = fread(fid, [numLeads, Inf], 'int16');
+fclose(fid);
+
+[~, numSamples_real] = size(data);
+tm = (0:numSamples_real-1) / Fs;
+
+%% ===== Load Filter Designer filters (Hd objects) =====
+
+% Band-pass filter
+Sbp = load(fullfile(projectRoot, 'myfilter.mat'));
+fn1 = fieldnames(Sbp);
+Hd_bp = Sbp.(fn1{1});   
+
+% Low-pass filter
+Slp = load(fullfile(projectRoot, 'mylowfilter.mat'));
+fn2 = fieldnames(Slp);
+Hd_lp = Slp.(fn2{1});
+
+%% Initialize feature arrays and parameters
+
+LogEn_val     = [];
+ShaEn_val     = [];
+CorrDim_val   = [];
+Patient_ID    = {};
+Signal_Name   = {};
+Lead_Index    = [];
+Lead_Name     = {};
 Segment_Index = [];
 
-% Parameters for Correlation Dimension
-m_embed   = 3;      % embedding dimension
-tau_embed = 5;      % delay 
-kOffset   = 10;     % Theiler window
-l_radius  = 0.5;    % radius for CorrDim
+% DWT coefficient storage (cell arrays)
+DWT_D1   = {};  
+DWT_D2   = {};  
+DWT_D3   = {};   
+DWT_A3   = {};   
 
-% Max number of samples for CorrDim
+m_embed   = 3;
+tau_embed = 5;
+kOffset   = 10;
+l_radius  = 0.5;
 Nmax_corr = 2000;
 
-% Sampling frequency (this should be extracted from the .hea file in a real scenario)
-Fs = 1000;  % Example value, adjust accordingly.
+segmentLength = 5;           
+windowSize    = segmentLength * Fs;
 
-%% 2) Loop over all patients and their signals
-for p = 1:length(records)
-    patientFolder = records{p, 1};
-    signalName = records{p, 2};
+fprintf('\nStarting feature extraction...\n');
 
-    % Full path to the patient's folder
-    folderPath = fullfile(base, patientFolder);
+%% Main loop: z-score, filters, DWT, features
 
-    % Path to .dat and .hea files
-    datFile = fullfile(folderPath, [signalName '.dat']);
-    heaFile = fullfile(folderPath, [signalName '.hea']);
+globalWindowIdx = 0;  
 
-    fprintf('Reading %s / %s ...\n', patientFolder, signalName);
+for leadIdx = 1:numLeads
+    fprintf('  Lead %d / %d ...\n', leadIdx, numLeads);
 
-    % 2.1) Read the header file to get the number of leads and samples
-    fid = fopen(heaFile, 'r');
-    if fid < 0
-        error('Cannot open .hea file: %s', heaFile);
+    x = double(data(leadIdx, :));  
+    % ---------- z-score normalization ----------
+    mu    = mean(x);
+    sigma = std(x);
+    if sigma == 0
+        x_norm = x - mu;
+    else
+        x_norm = (x - mu) / sigma;
     end
-    headerLine = fgetl(fid);  % Read the first line of the .hea file
-    headerInfo = strsplit(headerLine);  % Split the line to extract information
-    numLeads = str2double(headerInfo{2});
-    numSamples = str2double(headerInfo{4});
-    fclose(fid);
+    x_norm(~isfinite(x_norm)) = 0;
 
-    % 2.2) Read raw ECG signal from the .dat file
-    fid = fopen(datFile, 'r');
-    if fid < 0
-        error('Cannot open .dat file: %s', datFile);
+    % ---------- Filter Designer: Band-pass then Low-pass ----------
+    x_bp = filter(Hd_bp, x_norm);   % Band-pass
+    y    = filter(Hd_lp, x_bp);     % Low-pass
+    y(~isfinite(y)) = 0;
+
+    % ---------- Debug figure for Lead 1 (0–5 s) ----------
+    if leadIdx == 1
+        idxPlot = tm <= 5;
+
+        figure;
+        tiledlayout(3,1);
+
+        nexttile;
+        plot(tm(idxPlot), x(idxPlot));
+        title('Lead 1 - Raw ECG (0–5 s)');
+        xlabel('Time (s)'); ylabel('Amplitude');
+
+        nexttile;
+        plot(tm(idxPlot), x_bp(idxPlot));
+        title('Lead 1 - After Band-Pass (0–5 s)');
+        xlabel('Time (s)'); ylabel('Amplitude');
+
+        nexttile;
+        plot(tm(idxPlot), y(idxPlot));
+        title('Lead 1 - After Low-Pass (0–5 s)');
+        xlabel('Time (s)'); ylabel('Amplitude');
     end
-    data = fread(fid, [numLeads, numSamples], 'int16');  % Read the data for all leads
-    fclose(fid);
 
-    % Loop through all leads for the current signal
-    for leadIdx = 1:numLeads
-        x = data(leadIdx, :);  % Get the data for the current lead
+    % ---------- Segmentation into 5-second windows ----------
+    numSegments = floor(length(y) / windowSize);
+    fprintf('    numSegments = %d\n', numSegments);
 
-        %% Signal Normalization (Robust Normalization)
-        % Calculate Median manually
-        med = median(x);  % Calculate the median
-        % Calculate MAD (Mean Absolute Deviation) using the toolbox
-        mad_val = mad(x, 1);  % Calculate MAD (Mean Absolute Deviation)
+    for segmentIdx = 1:numSegments
+        idxStart    = (segmentIdx-1)*windowSize + 1;
+        idxEnd      = segmentIdx*windowSize;
+        segmentData = y(idxStart:idxEnd);
 
-        % Robust normalization: subtract the median and divide by MAD
-        x_normalized = (x - med) / mad_val;
+        globalWindowIdx = globalWindowIdx + 1;
 
-        %% Signal Filtering (Bandpass filter between 1 and 60 Hz)
-        % Use bandpass filter from Signal Processing Toolbox
-        [y, b] = bandpass(x_normalized, [1 60], Fs);  % Bandpass between 1 and 60 Hz
+        %% ====== DWT (db4, level 3) for this window ======
+        [c,l] = wavedec(segmentData, 3, 'db4');  
 
-        %% 2.3) Segmentation - Split signal into 5-second windows
-        % Determine number of samples per 5-second segment
-        segmentLength = 5;  % segment length in seconds
-        windowSize = segmentLength * Fs;  % number of samples per segment
-        
-        numSegments = floor(length(y) / windowSize);  % number of 5-second segments
+        A3 = appcoef(c,l,'db4',3);   
+        D1 = detcoef(c,l,1);         
+        D2 = detcoef(c,l,2);         
+        D3 = detcoef(c,l,3);         
 
-        for segmentIdx = 1:numSegments
-            % Extract the segment
-            segmentData = y((segmentIdx-1)*windowSize + 1 : segmentIdx*windowSize);
-            
-            %% 2.3.1) Logarithmic Entropy for the segment
-            LogEn_val(end+1) = logEn(segmentData);
+        % Save DWT coefficients in cell arrays
+        DWT_D1{globalWindowIdx,1} = D1;
+        DWT_D2{globalWindowIdx,1} = D2;
+        DWT_D3{globalWindowIdx,1} = D3;
+        DWT_A3{globalWindowIdx,1} = A3;
 
-            %% 2.3.2) Shannon Entropy for the segment
-            ShaEn_val(end+1) = shannonEntropy(segmentData);
+        % --- Debug plot of DWT for first window of lead 1 ---
+        if (leadIdx == 1) && (segmentIdx == 1)
+            figure;
+            tiledlayout(4,1);
 
-            %% 2.3.3) Correlation Dimension for the segment
-            % Use filtered signal for correlation dimension
-            x_short = segmentData;  % Use the full segment
-            if length(x_short) > Nmax_corr
-                x_short = x_short(1:Nmax_corr);
-            end
-            X = embedSignal(x_short, m_embed, tau_embed);  % Embedding
-            CorrDim_val(end+1) = corrDim(X, l_radius, kOffset);  % Correlation dimension
+            nexttile;
+            plot(D1);
+            title('DWT Detail 1 (Window 1, Lead 1)');
 
-            %% 2.4) Store patient, signal, lead, and feature information
-            Patient_ID{end+1} = patientFolder;
-            Signal_Name{end+1} = signalName;
-            Lead_Index(end+1) = leadIdx;  % Index for the lead
-            Lead_Name{end+1} = [signalName '_L' num2str(leadIdx)];  % Name of the lead
-            Segment_Index(end+1) = segmentIdx;  % Segment index for 5-second segments
+            nexttile;
+            plot(D2);
+            title('DWT Detail 2 (Window 1, Lead 1)');
+
+            nexttile;
+            plot(D3);
+            title('DWT Detail 3 (Window 1, Lead 1)');
+
+            nexttile;
+            plot(A3);
+            title('DWT Approximation 3 (Window 1, Lead 1)');
         end
+        %% ================================================
+
+        % ---------- Other features on the same window ----------
+        LogEn_val(end+1) = logEn(segmentData);
+        ShaEn_val(end+1) = shannonEntropy(segmentData);
+
+        x_short = segmentData;
+        if length(x_short) > Nmax_corr
+            x_short = x_short(1:Nmax_corr);
+        end
+        X = embedSignal(x_short, m_embed, tau_embed);
+        CorrDim_val(end+1) = corrDim(X, l_radius, kOffset);
+
+        % ---------- Metadata ----------
+        Patient_ID{end+1}    = patientFolder;
+        Signal_Name{end+1}   = recordName;
+        Lead_Index(end+1)    = leadIdx;
+        Lead_Name{end+1}     = sprintf('%s_L%d', recordName, leadIdx);
+        Segment_Index(end+1) = segmentIdx;
     end
 end
 
-%% 3) Create a table to store the results for all leads
-T = table(Patient_ID', Signal_Name', Lead_Index', Lead_Name', Segment_Index', LogEn_val', ShaEn_val', CorrDim_val', ...
-          'VariableNames', {'Patient_ID', 'Signal_Name', 'Lead_Index', 'Lead_Name', 'Segment_Index', 'LogEn', 'ShaEn', 'CorrDim'});
+fprintf('\nFeature extraction finished.\n');
 
-disp(' ')
-disp('=== Final Feature Table ===')
-disp(T)
+%% Build feature table (features based on raw time-domain segment)
 
-%% 4) Save the results to a CSV file
-outFile = fullfile(base, 'features_all.csv');  % Output path for the CSV file
-writetable(T, outFile);
-fprintf('\nSaved to: %s\n', outFile); 
+T = table(Patient_ID', Signal_Name', Lead_Index', Lead_Name', Segment_Index', ...
+          LogEn_val', ShaEn_val', CorrDim_val', ...
+          'VariableNames', {'Patient_ID','Signal_Name','Lead_Index', ...
+                            'Lead_Name','Segment_Index','LogEn','ShaEn','CorrDim'});
+
+disp(' ');
+disp('=== First Rows of Feature Table ===');
+disp(T(1:min(10, height(T)), :));
+
