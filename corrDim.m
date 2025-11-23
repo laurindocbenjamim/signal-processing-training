@@ -1,15 +1,14 @@
-function C = corrDim(X, l, k)
-% corrDim: Compute the correlation sum for a given radius
-%   X : M×d matrix of reconstructed vectors (each row = X_i)
-%   l : distance threshold (radius)
-%   k : Theiler window (offset to remove temporal correlation, e.g., 1, 5, ...)
+%In CorrDim, after you embed the signal into phase space you look for pairs of points whose distance is less than or equal to a small radius
 
+function C = corrDim(X, l, k)
     if nargin < 3
-        k = 1;    % default Theiler window if not provided  
+        k = 1;
     end
 
-    X = double(X);
-    [M, ~] = size(X);    % number of vectors
+    % normalize embedded vectors: each column mean 0, std 1
+    X = zscore(double(X));   
+    [M, ~] = size(X);
+
 
 
     count = 0;        % counter for pairs with distance <= l
@@ -35,4 +34,3 @@ function C = corrDim(X, l, k)
 
     C = 2 * count / (M^2);
 
-end
