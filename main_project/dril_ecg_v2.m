@@ -22,6 +22,7 @@ Patient_Folders = Patient_Folders([Patient_Folders.isdir]); % Filter to keep onl
 Patient_Folders = Patient_Folders(~ismember({Patient_Folders.name},{'.','..'})); % Remove the current (.) and parent (..) directory entries
 
 % Load the corresponding signal file
+count = 0;
 for p = 1:length(Patient_Folders)
     patient_name = Patient_Folders(p).name;
     patient_path = fullfile(BASE_DIR, patient_name);
@@ -30,12 +31,23 @@ for p = 1:length(Patient_Folders)
 
     % load the header file of the signal
     for f = 1 : length(head_files)
+        count = count + 1;
         header = erase(head_files(f).name, '.hea');
 
         % Concatenate the path and file name
         recordName = [patient_path, '/', header];
+
+        disp(['+====================+ Patient folder name: ', patient_name, ' +====================+']);
+        fprintf('\n +====================+ Record Name: %s  +====================+\n\n', recordName);
        
-        [signal, Fs, tm] = rdsamp(recordName); 
+        % The following line reads the signal data from the specified recordName.
+        % rdsamp is a function that retrieves the signal samples from a .dat file.
+        % Parameters:
+        % recordName: The full path to the data file (including the filename without extension).
+        % []: This parameter is for specifying the channels to read; an empty array means all channels will be read.
+        % []: This parameter is for specifying the sample range; an empty array means all samples will be read.
+        % 0: This parameter indicates that the function should not apply any scaling to the signal.
+        [signal, Fs, tm] = rdsamp(recordName, [], [], 0);
 
         whos signal;
         

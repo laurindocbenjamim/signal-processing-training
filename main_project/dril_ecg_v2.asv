@@ -13,7 +13,6 @@ ecg_pro = ECGProcessing(BASE_DIR);
 ecg_pro.extract(OUTPUT_DIR);
 
 
-
 if ~exist(OUTPUT_DIR, 'dir')
     mkdir(OUTPUT_DIR);
 end
@@ -23,6 +22,7 @@ Patient_Folders = Patient_Folders([Patient_Folders.isdir]); % Filter to keep onl
 Patient_Folders = Patient_Folders(~ismember({Patient_Folders.name},{'.','..'})); % Remove the current (.) and parent (..) directory entries
 
 % Load the corresponding signal file
+count = 0;
 for p = 1:length(Patient_Folders)
     patient_name = Patient_Folders(p).name;
     patient_path = fullfile(BASE_DIR, patient_name);
@@ -30,19 +30,50 @@ for p = 1:length(Patient_Folders)
     head_files = dir(fullfile(patient_path, '*.hea'));
 
     % load the header file of the signal
+    
     for f = 1 : length(head_files)
+        count = count + 1;
         header = erase(head_files(f).name, '.hea');
 
         % Concatenate the path and file name
-        output_path = [patient_path, '/', header];
-        %if contains(header, '10_re')
-            % Condition is correct, you can add any additional processing here
-             % Get the basic informations from the signal
+        recordName = [patient_path, '/', header];
 
-        [signal, Fs, tm] = rdsamp(output_path); 
+        disp(recordName);
+       
+        % The following line reads the signal data from the specified recordName.
+        % rdsamp is a function that retrieves the signal samples from a .dat file.
+        % Parameters:
+        % recordName: The full path to the data file (including the filename without extension).
+        % []: This parameter is for specifying the channels to read; an empty array means all channels will be read.
+        % []: This parameter is for specifying the sample range; an empty array means all samples will be read.
+        % 0: This parameter indicates that the function should not apply any scaling to the signal.
+        [signal, Fs, tm] = rdsamp(recordName, [], [], 0);
 
         whos signal;
-        %end
+        
+        [numSamples,numLeads,desired_samples,total_seconds] = SigPreProcessing.calculate_seconds(signal, Fs);
+
+        fprintf('Regist read with %d samples & %d channels/Leads (columns within the matriz) \n to %d Hz %d Tot.Seconds (rows within the matriz) \n', numSamples, numLeads, Fs, total_seconds);
+        
+        fprintf('Desired samples: %d \n', desired_samples);
+
+        [conventional_leads, frank_leads] = SigPreProcessing.load_leads(signal);
+
+        % =====================================================================================
+        % 2. READ THE DIAGNOSTIC (Parsing of .hea file)
+        % The rdsamp function focuses on numbers. To get the diagnostic text ("Label"),
+        % the most direct way in MATLAB is to read the .hea text file line by line.
+
+        
+        [patient_diagnose_label, fid] = SigPreProcessing.load_patient_diagnose(recordName, 'Reason for admission', 'IgnoreCase');
+        
+        
+        if strcmp(patient_diagnose_label, 'unknow')
+            fprintf('Patient dignostic: %s\n', patient_diagnose_label);
+        else
+            fprintf('Patient diagnostic: %s\n', patient_diagnose_label);
+        end
+
     end % EndFor
 end % EndFor
 
