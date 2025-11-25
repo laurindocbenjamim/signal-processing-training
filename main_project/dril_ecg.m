@@ -1,8 +1,5 @@
 
 
-
-% read the signal with 
-%load('main_db/ecg_db_patient_01/');
 folder = 'main_db/ecg_db_patient_01/';
 %recordName = "s0010_re"; % Isto causa o erro na toolbox antiga
 %recordName = convertStringsToChars("s0010_re"); % Isto causa o erro na toolbox antiga
@@ -14,7 +11,7 @@ whos signal;
 
 [numSamples,numLeads,desired_samples,total_seconds] = calculate_seconds(signal, Fs);
 
-fprintf('Regist read with %d samples & %d channels/Leads (columns within the matriz) \n to %d Hz %d Tot.Seconds (rows within the matriz) \n', numSamples, numLeads, Fs, total_seco);
+fprintf('Regist read with %d samples & %d channels/Leads (columns within the matriz) \n to %d Hz %d Tot.Seconds (rows within the matriz) \n', numSamples, numLeads, Fs, total_seconds);
 
 fprintf('Desired samples: %d \n', desired_samples);
 
@@ -88,9 +85,9 @@ vector = linspace(-Fs/2, Fs/2, length(sig));
 figure, plot(vector, sig);
 
 % Apluing the wavelet
-[C, L] = wavedec(sig, 3, 'sym5');
-
-A = appcoef(C, L, 'sym5', 3);
+% [C, L] = wavedec(sig, 3, 'sym5');
+% 
+% A = appcoef(C, L, 'sym5', 3);
 
 %% Prepare to plot the comparison for all leads
 
@@ -164,3 +161,4 @@ function [signal_10s] = splite_sample_int_10_seconds(signal, desired_samples)
         signal_10s = signal;
     end
 end
+
