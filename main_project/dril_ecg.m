@@ -68,10 +68,6 @@ end
 
     % =========================================================================
 % VERIFICAÇÃO
-% =========================================================================
-fprintf('Sinal normalizado. Média da Lead 1: %.4f (Deve ser ~0)\n', mean(signal_normal(:,1)));
-fprintf('Energia da Lead 1: %.4f (Deve ser 1)\n', sum(signal_normal(:,1).^2));
-
 % Prepare to plot the comparison for all leads
 num_leads = 3; % Ensure num_leads is defined for the plotting function
 plot_and_compare_leads(signal_10s, signal_normal, num_leads);
@@ -92,8 +88,12 @@ figure, plot(vector, sig);
 %% Prepare to plot the comparison for all leads
 
 function [] = plot_and_compare_leads(signal_10s,signal_normal,num_leads)
-% Prepare to plot the comparison for all leads
+    % Prepare to plot the comparison for all leads
     for lead = 1:num_leads
+        % =========================================================================
+        fprintf('Sinal normalizado. Média da Lead %d: %.4f (Deve ser ~0)\n', lead, mean(signal_normal(:,lead)));
+        fprintf('Energia da Lead %d: %.4f (Deve ser 1)\n', lead, sum(signal_normal(:,lead).^2));
+
         figure;
         subplot(2,1,1); plot(signal_10s(:,lead)); title(sprintf('Original Signal (10s) - Lead %d', lead));
         subplot(2,1,2); plot(signal_normal(:,lead)); title(sprintf('Normalized signal (Eq. 1) - Lead %d', lead));

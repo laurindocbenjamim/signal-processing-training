@@ -49,8 +49,11 @@ for p = 1:length(Patient_Folders)
         % 0: This parameter indicates that the function should not apply any scaling to the signal.
         [signal, Fs, tm] = rdsamp(recordName, [], [], 0);
 
+        % Inspect the signal
         whos signal;
         
+        % Get the number of samples, total of seconds, and the desired
+        % samples according to the article
         [numSamples,numLeads,desired_samples,total_seconds] = SigPreProcessing.calculate_seconds(signal, Fs);
 
         fprintf('Regist read with %d samples & %d channels/Leads (columns within the matriz) \n to %d Hz %d Tot.Seconds (rows within the matriz) \n', numSamples, numLeads, Fs, total_seconds);
@@ -74,6 +77,42 @@ for p = 1:length(Patient_Folders)
             fprintf('Patient diagnostic: %s\n', patient_diagnose_label);
         end
 
+        % Split the signal into 10 seconds
+
+        [signal_10s] = SigPreProcessing.splite_sample_int_10_seconds(signal, desired_samples);
+        
+        % Create a matrix to store the processed signal 
+        signal_normal = zeros(size(signal_10s));
+        
+        % Normalize using the article equation
+        [signal_normal, lead_final] = SigPreProcessing.normalize_signal_simple(signal_normal,signal_10s, numLeads);
+        
+
+        % VERIFICATION
+        % =========================================================================
+        % Prepare to plot the comparison for all leads
+        num_leads = 1; % Ensure num_leads is defined for the plotting function
+        SigPreProcessing.plot_and_compare_leads('Normalized', patient_name, signal_10s, signal_normal, num_leads);
+
+        % Apply Highpass filter 
+        % LowPass01, HighPass01, BandPass01, BandPass02, Bandstop
+        [signal_normal_filt] = SigPreProcessing.apply_pass_filter(signal_normal, signal_10s, numLeads, HighPass02);
+        
+        % Plot 
+        SigPreProcessing.plot_and_compare_leads('HighPass Filtered', patient_name, signal_normal, signal_normal_filt, num_leads);
+        
+        % LowPass01
+        [signal_normal_filt] = SigPreProcessing.apply_pass_filter(signal_normal, signal_10s, numLeads, LowPass03);
+        
+        % Plot 
+        SigPreProcessing.plot_and_compare_leads('LowPass Filtered', patient_name, signal_normal, signal_normal_filt, num_leads);
+
+        % Applying Banstop filter/ but should be Nocth filter after
+        % banstop
+        %[signal_normal_filt] = SigPreProcessing.apply_pass_filter(signal_normal_filt, signal_10s, numLeads, Bandstop);
+
+        % Plot 
+        %SigPreProcessing.plot_and_compare_leads('BS Filtered', patient_name, signal_normal, signal_normal_filt, num_leads);
     end % EndFor
 end % EndFor
 

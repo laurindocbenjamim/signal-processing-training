@@ -117,12 +117,12 @@ classdef SigPreProcessing
         end
 
         %% Lowpass Filtering  
-        function [signal_normal] = apply_pass_filter(signal_normal, signal_10s, numLeads, selectedFilter)
+        function [signal_normal] = lowpass_filter(signal_normal, signal_10s, numLeads, LowPass01)
 
             % Get the Numerator (B) and Denominator (A) coefficients from the filter object.
             % B is the feedforward vector (used as the first argument in 'filter').
             % A is the feedback vector (used as the second argument in 'filter').
-            [B, A] = tf(selectedFilter); 
+            [B, A] = tf(LowPass01); 
 
             % Inicializar uma matriz para armazenar o sinal filtrado
             %numSamples = size(signal_normal, 1);
@@ -133,7 +133,7 @@ classdef SigPreProcessing
                 lead = signal_10s(:, i); % Get the current lead
                 
                 % Apply the filter: output = filter(B, A, input)
-                signal_normal(:, i) = filtfilt(B, A, lead);
+                signal_normal(:, i) = filter(B, A, lead);
             end
         end
         %% Bandpass filtering
@@ -156,7 +156,27 @@ classdef SigPreProcessing
                 signal_normal(:, i) = filter(B_bandpass, A_bandpass, lead);
             end
         end
+
+        %% Bandstop filtering substituting Notch
+        function [signal_normal] = bandpass_filter(signal_normal, signal_10s, numLeads, BandPass_ECG)
+
+            % 1. Obter os coeficientes do novo filtro Bandpass
+            % [B] = Numerador (feedforward), [A] = Denominador (feedback)
+            % A função 'tf' (Transfer Function) é usada para extrair os vetores B e A do objeto.
+            [B_bandpass, A_bandpass] = tf(BandPass_ECG); 
         
+            % Inicializar uma matriz para armazenar o sinal filtrado
+            %N_amostras = size(signal_input, 1);
+            %signal_filtered = zeros(N_amostras, numLeads); 
+        
+            % 2. Aplicar o filtro LEAD por LEAD (Coluna por Coluna)
+            for i = 1: numLeads
+                lead = signal_10s(:, i); % Extrair a Lead atual
+                
+                % Aplica o filtro Bandpass: output = filter(B, A, input)
+                signal_normal(:, i) = filter(B_bandpass, A_bandpass, lead);
+            end
+        end
 
 
 
