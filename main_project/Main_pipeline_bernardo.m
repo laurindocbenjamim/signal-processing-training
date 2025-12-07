@@ -103,3 +103,5 @@ A3mat= cell2mat(A3cell);
 plot(A3mat)
 title('Aproxiation 3')
 
+
+
