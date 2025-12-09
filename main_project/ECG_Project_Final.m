@@ -7,20 +7,24 @@
 clear;
 close all;
 clc;
-
+pwd, ls;
+OUTPUT_DIR="extracted_features";
 patient_cell={}; %creating table for patients
 final_cell={};
 
 heafiles=dir(fullfile("main_db","**","*.hea"));
 
+if ~exist(OUTPUT_DIR, 'dir')
+    mkdir(OUTPUT_DIR)
+end
+
 
 for cur_pat=1:length(heafiles)
 
-recordName=[heafiles(cur_pat).folder,'\',heafiles(cur_pat).name];
+recordName=[heafiles(cur_pat).folder,'/',heafiles(cur_pat).name];
 
   [signal, Fs, tm] = rdsamp(recordName(strfind(recordName,'main_db'):end),[],[],0);
 
- 
 
 [patient_diagnose_label, fid] = load_patient_diagnose(recordName, 'Reason for admission','IgnoreCase');
 
@@ -31,7 +35,7 @@ fprintf('Processing ECG\n')
 
 
 
-        
+
 
 leads=size(signal,2); %Recording number of leads for later plot 
 
@@ -104,13 +108,13 @@ for k = 1:number_of_windows
     DWT{k,2}= D2;
     DWT{k,3}= D3;
     DWT{k,4}= A3;
-    
+
     %This is just to later plot the aproximation lvl 3
     A3cell{k,1}= DWT{k,4};
 end
 
 %Debuging and making sure everything the DWT is correct
-    
+
 % figure
 % tiledlayout(4,1)
 % nexttile
@@ -136,48 +140,48 @@ end
 
 
    %% Feature extration 
-    
+
 fprintf('Extracting features... \n')
 
  for k= 1:number_of_windows
 
-     
-     %Aproximate entropy Detail 1
-   ApEn(k,1) = approximateEntropy(DWT{k,1});
-   
-     %Aproximate entropy Detail 2
-   ApEn(k,2) = approximateEntropy(DWT{k,2});
- 
-     %Aproximate entropy Detail 3
-   ApEn(k,3) = approximateEntropy(DWT{k,3});
-   
-   %Aproximate entropy Aproximation 3
-   ApEn(k,4) = approximateEntropy(DWT{k,4}); 
 
-   %Aproximate entropy Raw signal
-   ApEn(k,5) = approximateEntropy(ECGFilteredNormalized{k,cur_lead});
+     %Aproximate entropy Detail 1
+   % ApEn(k,1) = approximateEntropy(DWT{k,1});
+   % 
+   %   %Aproximate entropy Detail 2
+   % ApEn(k,2) = approximateEntropy(DWT{k,2});
+   % 
+   %   %Aproximate entropy Detail 3
+   % ApEn(k,3) = approximateEntropy(DWT{k,3});
+   % 
+   % %Aproximate entropy Aproximation 3
+   % ApEn(k,4) = approximateEntropy(DWT{k,4}); 
+   % 
+   % %Aproximate entropy Raw signal
+   % ApEn(k,5) = approximateEntropy(ECGFilteredNormalized{k,cur_lead});
 
     %Lyapunov exponent Detail 1
-   Elay(k,1)= lyapunovExponent(DWT{k,1});
-
-    %Lyapunov exponent Detail 2 
-   Elay(k,2)= lyapunovExponent(DWT{k,2});
-
-    %Lyapunov exponent Detail 3
-   Elay(k,3)= lyapunovExponent(DWT{k,3});
-  
-    %Lyapunov exponent Aproximation 3
-   Elay(k,4)= lyapunovExponent(DWT{k,4});
-
-     %Lyapunov exponent Raw signal
-   Elay(k,5)= lyapunovExponent(ECGFilteredNormalized{k,cur_lead});
+   % Elay(k,1)= lyapunovExponent(DWT{k,1});
+   % 
+   %  %Lyapunov exponent Detail 2 
+   % Elay(k,2)= lyapunovExponent(DWT{k,2});
+   % 
+   %  %Lyapunov exponent Detail 3
+   % Elay(k,3)= lyapunovExponent(DWT{k,3});
+   % 
+   %  %Lyapunov exponent Aproximation 3
+   % Elay(k,4)= lyapunovExponent(DWT{k,4});
+   % 
+   %   %Lyapunov exponent Raw signal
+   % Elay(k,5)= lyapunovExponent(ECGFilteredNormalized{k,cur_lead});
 
    %Logarithmic entropy Detail 1 
    LogEn(k,1)= logEn(DWT{k,1});
 
    %Logarithmic entropy Detail 2 
    LogEn(k,2)= logEn(DWT{k,2});
-   
+
    %Logarithmic entropy Detail 3
    LogEn(k,3)= logEn(DWT{k,3});
 
@@ -192,10 +196,10 @@ fprintf('Extracting features... \n')
 
    %Shanon Entropy Detail 2
    ShanEn(k,2)=shannonEntropy(DWT{k,2});
-   
+
    %Shanon Entropy Detail 3
    ShanEn(k,3)=shannonEntropy(DWT{k,3});
-   
+
    %Shanon Entropy Aproximation 3
    ShanEn(k,4)=shannonEntropy(DWT{k,4});
 
@@ -216,7 +220,7 @@ fprintf('Extracting features... \n')
 
     %Higuchi Fractal Dimension Raw signal
     Higuch(k,5) = higuchi_fd(ECGFilteredNormalized{k,cur_lead}, 10);
-    
+
     %Hurst Exponent Detail 1 
     HurstExp(k,1) = Hurst_Exponent_RS_Analysis(DWT{k,1});
 
@@ -247,27 +251,27 @@ fprintf('Extracting features... \n')
      %Katz Fractal Dimension Raw signal 
     KatzFractal(k,5) = Katz_Fractal_Dimension(ECGFilteredNormalized{k,cur_lead});
 
-    %Correlation Dimension Detail 1
-    CorrDim(k,1) = correlationDimension(DWT{k,1});
-
-    %Correlation Dimension Detail 2
-    CorrDim(k,2) = correlationDimension(DWT{k,2});
-
-    %Correlation Dimension Detail 3
-    CorrDim(k,3) = correlationDimension(DWT{k,3});
-
-    %Correlation Dimension Aproximation 4
-    CorrDim(k,4) = correlationDimension(DWT{k,4});
-
-    %Correlation Dimension Raw Signal
-    CorrDim(k,5) = correlationDimension(ECGFilteredNormalized{k,cur_lead});
+    % %Correlation Dimension Detail 1
+    % CorrDim(k,1) = correlationDimension(DWT{k,1});
+    % 
+    % %Correlation Dimension Detail 2
+    % CorrDim(k,2) = correlationDimension(DWT{k,2});
+    % 
+    % %Correlation Dimension Detail 3
+    % CorrDim(k,3) = correlationDimension(DWT{k,3});
+    % 
+    % %Correlation Dimension Aproximation 4
+    % CorrDim(k,4) = correlationDimension(DWT{k,4});
+    % 
+    % %Correlation Dimension Raw Signal
+    % CorrDim(k,5) = correlationDimension(ECGFilteredNormalized{k,cur_lead});
 
     %Energy Detail 1
     Energy(k,1) = sum(DWT{k,1}.^2);
 
     %Energy Detail 2
     Energy(k,2) = sum(DWT{k,2}.^2);
-    
+
     %Energy Detail 3
     Energy(k,3) = sum(DWT{k,3}.^2);
 
@@ -276,30 +280,30 @@ fprintf('Extracting features... \n')
 
     %Energy Raw Signal
     Energy(k,5) = sum(ECGFilteredNormalized{k,cur_lead}.^2);
-    
+
 
 
 
  end
 
  %% Data Compression and addition to table 
-   
+
 fprintf('Compressing Data and creating tables... \n')
 
     for k=1:5
-    ApEnMEAN(k)= mean(ApEn(:,k));
-    ApEnSTD(k)= std(ApEn(:,k));
-    ApEn95P(k)= prctile(ApEn(:,k),95);
-    ApEnVAr(k)= var(ApEn(:,k));
-    ApEnMEDIAN(k)= median(ApEn(:,k));
-    ApEnKURT(k)= kurtosis(ApEn(:,k));
-    
-    CorrDimMEAN(k)= mean(CorrDim(:,k));
-    CorrDimSTD(k)= std(CorrDim(:,k));
-    CorrDim95P(k)= prctile(CorrDim(:,k),95);
-    CorrDimVAr(k)= var(CorrDim(:,k));
-    CorrDimMEDIAN(k)= median(CorrDim(:,k));
-    CorrDimKURT(k)= kurtosis(CorrDim(:,k));
+    %ApEnMEAN(k)= mean(ApEn(:,k));
+    %ApEnSTD(k)= std(ApEn(:,k));
+    %ApEn95P(k)= prctile(ApEn(:,k),95);
+    % ApEnVAr(k)= var(ApEn(:,k));
+    % ApEnMEDIAN(k)= median(ApEn(:,k));
+    % ApEnKURT(k)= kurtosis(ApEn(:,k));
+
+    %CorrDimMEAN(k)= mean(CorrDim(:,k));
+    %CorrDimSTD(k)= std(CorrDim(:,k));
+    %CorrDim95P(k)= prctile(CorrDim(:,k),95);
+    % CorrDimVAr(k)= var(CorrDim(:,k));
+    % CorrDimMEDIAN(k)= median(CorrDim(:,k));
+    % CorrDimKURT(k)= kurtosis(CorrDim(:,k));
 
     EnergyMEAN(k)= mean(Energy(:,k));
     EnergySTD(k)= std(Energy(:,k));
@@ -308,12 +312,12 @@ fprintf('Compressing Data and creating tables... \n')
     EnergyMEDIAN(k)= median(Energy(:,k));
     EnergyKURT(k)= kurtosis(Energy(:,k)); 
 
-    ElayMEAN(k)=mean(Elay(:,k));
-    ElaySTD(k)= std(Elay(:,k));
-    Elay95P(k)= prctile(Elay(:,k),95);
-    ElayVAr(k)= var(Elay(:,k));
-    ElayMEDIAN(k)= median(Elay(:,k));
-    ElayKURT(k)= kurtosis(Elay(:,k));
+    % ElayMEAN(k)=mean(Elay(:,k));
+    % ElaySTD(k)= std(Elay(:,k));
+    % Elay95P(k)= prctile(Elay(:,k),95);
+    % ElayVAr(k)= var(Elay(:,k));
+    % ElayMEDIAN(k)= median(Elay(:,k));
+    % ElayKURT(k)= kurtosis(Elay(:,k));
 
 
     LogEnMEAN(k)=mean(LogEn(:,k));
@@ -354,21 +358,26 @@ fprintf('Compressing Data and creating tables... \n')
 
     end
 
-   
-    
 
-    temp_table = table(ApEnMEAN,ApEnSTD,ApEn95P,ApEnVAr,ApEnMEDIAN,ApEnKURT, CorrDimMEAN, CorrDimSTD,CorrDim95P, CorrDimVAr, CorrDimMEDIAN, CorrDimKURT, EnergyMEAN, EnergySTD, Energy95P, EnergyVAr, EnergyMEDIAN, EnergyKURT, ...
-        ElayMEAN,ElaySTD,Elay95P,ElayVAr,ElayMEDIAN,ElayKURT,LogEnMEAN,LogEnSTD,LogEn95P,LogEnVAr,LogEnMEDIAN,LogEnKURT, ...
-        ShanEnMEAN, ShanEnSTD,ShanEn95P, ShanEnVAr,ShanEnMEDIAN,ShanEnKURT,HiguchMEAN,HiguchSTD,Higuch95P,HiguchVAr,HiguchMEDIAN,HiguchKURT,HurstExpMEAN,HurstExpSTD,HurstExp95P,HurstExpVAr, ...
-        HurstExpMEDIAN,HurstExpKURT,KatzFractalMEAN,KatzFractalSTD,KatzFractal95P,KatzFractalVAr,KatzFractalMEDIAN,KatzFractalKURT);
+
+
+    % temp_table = table(ApEnMEAN,ApEnSTD,ApEn95P,ApEnVAr,ApEnMEDIAN,ApEnKURT, CorrDimMEAN, CorrDimSTD,CorrDim95P, CorrDimVAr, CorrDimMEDIAN, CorrDimKURT, EnergyMEAN, EnergySTD, Energy95P, EnergyVAr, EnergyMEDIAN, EnergyKURT, ...
+    %     ElayMEAN,ElaySTD,Elay95P,ElayVAr,ElayMEDIAN,ElayKURT,LogEnMEAN,LogEnSTD,LogEn95P,LogEnVAr,LogEnMEDIAN,LogEnKURT, ...
+    %     ShanEnMEAN, ShanEnSTD,ShanEn95P, ShanEnVAr,ShanEnMEDIAN,ShanEnKURT,HiguchMEAN,HiguchSTD,Higuch95P,HiguchVAr,HiguchMEDIAN,HiguchKURT,HurstExpMEAN,HurstExpSTD,HurstExp95P,HurstExpVAr, ...
+    %     HurstExpMEDIAN,HurstExpKURT,KatzFractalMEAN,KatzFractalSTD,KatzFractal95P,KatzFractalVAr,KatzFractalMEDIAN,KatzFractalKURT);
     
+    temp_table = table(EnergyMEAN, EnergySTD, Energy95P, EnergyVAr, EnergyMEDIAN, EnergyKURT, ...
+         LogEnMEAN,LogEnSTD,LogEn95P,LogEnVAr,LogEnMEDIAN,LogEnKURT, ...
+         ShanEnMEAN, ShanEnSTD,ShanEn95P, ShanEnVAr,ShanEnMEDIAN,ShanEnKURT,HiguchMEAN,HiguchSTD,Higuch95P,HiguchVAr,HiguchMEDIAN,HiguchKURT,HurstExpMEAN,HurstExpSTD,HurstExp95P,HurstExpVAr, ...
+         HurstExpMEDIAN,HurstExpKURT,KatzFractalMEAN,KatzFractalSTD,KatzFractal95P,KatzFractalVAr,KatzFractalMEDIAN,KatzFractalKURT);
+
    temp_table = renamevars(temp_table,temp_table.Properties.VariableNames,temp_table.Properties.VariableNames + "_lead" + cur_lead);
-    
+
    lead_cell{cur_lead}= temp_table;
-    
+
    fprintf('lead %d %s \n', cur_lead, 'is done')
-   
-   
+
+
 
  end
 fprintf('The ECG of the  patinent nº %d %s \n', cur_pat, 'is done!')
@@ -380,13 +389,21 @@ lead_cell{cur_lead+1}=t;
 
 patient_cell= cat(2,lead_cell{:});
 
+% Create ID for patients
+[patient_cell_with_id, diagnosis_ids, id_map] = create_patient_id(patient_cell, 'Patient diagnosis', true);
+disp(id_map);
 
-final_cell{cur_pat}=patient_cell ;
+final_cell{cur_pat}=patient_cell_with_id ;
 
 fprintf('%d%s \n',int8((cur_pat/length(heafiles))*100),'% done!')
- end
+end
 
 
- 
+
    %% 
+   
    final_Tabel= cat(1,final_cell{:});
+    % Save all features of all detected signals
+    
+    writetable(final_Tabel, fullfile(OUTPUT_DIR, 'ECG_Features_Summary.csv'));
+
